@@ -2,14 +2,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 
 <!-- PWA : manifest, thème, icônes -->
-<link rel="manifest" href="/manifest.json">
+<link rel="manifest" href="./manifest.json">
 <meta name="theme-color" content="#0A0E14">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Enveloppes">
-<link rel="icon" href="/icon-192.png">
-<link rel="apple-touch-icon" href="/icon-192.png">
+<link rel="icon" href="./icon-192.png">
+<link rel="apple-touch-icon" href="./icon-192.png">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
@@ -396,15 +396,8 @@
             <input id="env-name" type="text" placeholder="Salaire juillet">
           </div>
           <div class="field">
-            <label>Montant</label>
+            <label>Montant (MAD)</label>
             <input id="env-amount" type="number" min="0" step="0.01" placeholder="5000">
-          </div>
-          <div class="field" style="max-width:180px;">
-            <label>Devise</label>
-            <div class="toggle-row">
-              <button type="button" class="type-btn besoin active" id="env-cur-MAD" onclick="setEnvCurrency('MAD')">MAD</button>
-              <button type="button" class="type-btn envie" id="env-cur-FCFA" onclick="setEnvCurrency('FCFA')">FCFA</button>
-            </div>
           </div>
           <div class="field">
             <label>Objectif à atteindre (optionnel)</label>
@@ -447,7 +440,7 @@
             <select id="topup-envelope"></select>
           </div>
           <div class="field">
-            <label>Montant</label>
+            <label>Montant (MAD)</label>
             <input id="topup-amount" type="number" min="0" step="0.01" placeholder="300">
           </div>
           <div class="field">
@@ -740,22 +733,6 @@ function customAlert(message){
 }
 let currentCurrency = 'MAD';
 let exchangeRate = 60; // 1 MAD ≈ 60 FCFA (approximatif, modifiable)
-
-// Formate un montant déjà exprimé dans la devise donnée, sans conversion
-function fmtRaw(n, currency){
-  if(currency === 'FCFA'){
-    return Math.round(n).toLocaleString('fr-FR') + ' FCFA';
-  }
-  return (Math.round(n*100)/100).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' MAD';
-}
-
-// Convertit un montant depuis sa devise d'origine vers le MAD (devise de référence interne)
-function toMAD(n, fromCurrency){
-  return fromCurrency === 'FCFA' ? n / exchangeRate : n;
-}
-
-// Formate un total global (peut mélanger plusieurs enveloppes/devises) : le montant reçu est déjà en MAD,
-// et s'affiche converti selon la devise globale sélectionnée en haut de l'appli.
 function fmt(n){
   if(currentCurrency === 'FCFA'){
     const converted = Math.round(n * exchangeRate);
@@ -763,10 +740,6 @@ function fmt(n){
   }
   return (Math.round(n*100)/100).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' MAD';
 }
-function envCurrency(env){ return (env && env.currency) ? env.currency : 'MAD'; }
-function fmtEnv(n, env){ return fmtRaw(n, envCurrency(env)); }
-function getEnvelopeById(id){ return data.envelopes.find(e=>e.id===id); }
-
 function todayStr(){ const d=new Date(); return d.toISOString().slice(0,10); }
 
 const hasCloudStorage = (typeof window.storage !== 'undefined' && window.storage !== null);
@@ -1171,13 +1144,6 @@ function renderUnassigned(){
     </div>`).join('');
 }
 
-let newEnvCurrency = 'MAD';
-function setEnvCurrency(cur){
-  newEnvCurrency = cur;
-  document.getElementById('env-cur-MAD').classList.toggle('active', cur==='MAD');
-  document.getElementById('env-cur-FCFA').classList.toggle('active', cur==='FCFA');
-}
-
 function saveEnvelope(){
   const name = document.getElementById('env-name').value.trim();
   const amountRaw = document.getElementById('env-amount').value;
@@ -1198,13 +1164,12 @@ function saveEnvelope(){
     const env = editingEnv;
     if(env){
       env.name = name; env.amount = amount; env.date = date; env.dateUnknown = dateUnknown;
-      env.currency = newEnvCurrency;
       if(isChargeBeingEdited) env.plannedAmount = plannedAmount;
     }
     cancelEnvelopeEdit();
   } else {
     data.envelopes.push({
-      id: uid(), name, amount, currency: newEnvCurrency, createdAt: new Date().toISOString(), date, dateUnknown,
+      id: uid(), name, amount, createdAt: new Date().toISOString(), date, dateUnknown,
       recurring, recurringId: recurring ? uid() : null, month: recurring ? todayStr().slice(0,7) : null
     });
   }
@@ -1215,7 +1180,6 @@ function saveEnvelope(){
   document.getElementById('env-date-unknown').checked=false;
   document.getElementById('env-date').disabled=false;
   document.getElementById('env-date').value = todayStr();
-  setEnvCurrency('MAD');
   save(); renderAll();
 }
 
@@ -1227,7 +1191,6 @@ function editEnvelope(id){
   document.getElementById('env-name').value = env.name;
   document.getElementById('env-amount').value = env.amount;
   document.getElementById('env-goal').value = (env.plannedAmount !== null && env.plannedAmount !== undefined) ? env.plannedAmount : '';
-  setEnvCurrency(envCurrency(env));
   document.getElementById('env-date-unknown').checked = !!env.dateUnknown;
   document.getElementById('env-date').disabled = !!env.dateUnknown;
   document.getElementById('env-date').value = env.date || '';
@@ -1248,7 +1211,6 @@ function cancelEnvelopeEdit(){
   document.getElementById('env-date-unknown').checked=false;
   document.getElementById('env-date').disabled=false;
   document.getElementById('env-date').value = todayStr();
-  setEnvCurrency('MAD');
   document.getElementById('env-submit-btn').textContent = "Ajouter l'enveloppe";
   document.getElementById('env-cancel-btn').style.display = 'none';
 }
@@ -1525,15 +1487,12 @@ function renderTopupHistory(){
     container.innerHTML = '<div class="empty-note">Aucun apport effectué.</div>';
     return;
   }
-  container.innerHTML = topups.map(t=>{
-    const env = getEnvelopeById(t.envelopeId);
-    return `
+  container.innerHTML = topups.map(t=>`
     <div class="tpl-item" style="flex-wrap:wrap;">
       <span class="tpl-name" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${t.date} — ${escapeHtml(t.envelopeName)}${t.justification ? `<br><span style="font-size:11px;color:var(--ink-soft);font-style:italic;">📝 ${escapeHtml(t.justification)}</span>` : ''}</span>
-      <span class="tpl-amt" style="color:${t.amount<0?'var(--pink)':'var(--green)'};">${t.amount>=0?'+':''}${fmtEnv(t.amount, env)}</span>
+      <span class="tpl-amt" style="color:${t.amount<0?'var(--pink)':'var(--green)'};">${t.amount>=0?'+':''}${fmt(t.amount)}</span>
       <button class="del-btn" title="Annuler" onclick="deleteTopup('${t.id}')">✕</button>
-    </div>`;
-  }).join('');
+    </div>`).join('');
 }
 
 function addTransfer(){
@@ -1651,8 +1610,8 @@ function renderEnvelopes(){
       const projected = reste - t.amount;
       return `
       <div class="tpl-item" style="flex-wrap:wrap;">
-        <span class="tpl-name"><span class="tpl-tag ${t.type}"></span>${escapeHtml(t.name)} <span style="color:${projected<0?'var(--pink)':'var(--ink-soft)'};font-size:11px;">— resterait ${fmtEnv(projected, env)}</span></span>
-        <span class="tpl-amt">${fmtEnv(t.amount, env)}</span>
+        <span class="tpl-name"><span class="tpl-tag ${t.type}"></span>${escapeHtml(t.name)} <span style="color:${projected<0?'var(--pink)':'var(--ink-soft)'};font-size:11px;">— resterait ${fmt(projected)}</span></span>
+        <span class="tpl-amt">${fmt(t.amount)}</span>
         <button class="ghost" onclick="editExpense('${t.id}')">Modifier</button>
         <button class="ghost" onclick="activateTemplate('${t.id}')">Ajouter</button>
         <button class="del-btn" title="Supprimer le modèle" onclick="deleteExpense('${t.id}')">✕</button>
@@ -1666,7 +1625,7 @@ function renderEnvelopes(){
       return `
       <div class="tpl-item" style="flex-wrap:nowrap;">
         <span class="tpl-name" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${t.date} ${outgoing?'→':'←'} ${escapeHtml(other)}</span>
-        <span class="tpl-amt" style="color:${outgoing?'var(--pink)':'var(--green)'};white-space:nowrap;">${outgoing?'-':'+'}${fmtEnv(t.amount, env)}</span>
+        <span class="tpl-amt" style="color:${outgoing?'var(--pink)':'var(--green)'};white-space:nowrap;">${outgoing?'-':'+'}${fmt(t.amount)}</span>
         <button class="del-btn" title="Annuler ce transfert" onclick="deleteTransfer('${t.id}')">✕</button>
       </div>`;
     }).join('') : '<div style="font-size:12px;color:var(--ink-soft);">Aucun transfert.</div>';
@@ -1683,7 +1642,6 @@ function renderEnvelopes(){
         <div class="envelope-body">
           <div class="envelope-name clickable" onclick="goToFiltered('envelope','${env.id}')" title="Voir les dépenses de cette enveloppe">
             ${escapeHtml(env.name)} ↗
-            <span class="recurring-badge" style="border-color:var(--ink-soft);color:var(--ink-soft);">${envCurrency(env)}</span>
             ${env.recurring ? `<span class="recurring-badge" title="Revenu récurrent">🔁 ${monthLabel(env.month)}</span>` : ''}
             ${env.chargeYear ? `<span class="recurring-badge" title="Charge planifiée">📅 ${CAL_MONTH_NAMES[env.chargeMonth-1]} ${env.chargeYear}</span>` : ''}
           </div>
@@ -1691,17 +1649,17 @@ function renderEnvelopes(){
             <div class="line" style="color:var(--ink-soft);font-size:11px;">
               <span>${env.dateUnknown || !env.date ? 'Date incertaine' : 'Ajoutée le ' + env.date}</span>
             </div>
-            ${envTransfers.length ? `<div class="line" style="color:var(--ink-soft);font-size:11px;" title="Reçu ${fmtEnv(trfInTotal, env)} — Envoyé ${fmtEnv(trfOutTotal, env)}"><span>Transferts (total)</span><span style="color:${trfNet<0?'var(--pink)':'var(--green)'};">${trfNet>=0?'+':''}${fmtEnv(trfNet, env)}</span></div>` : ''}
-            <div class="line"><span>Revenu</span><span>${fmtEnv(env.amount, env)}</span></div>
-            ${env.plannedAmount ? `<div class="line" style="color:var(--yellow);"><span>Prévisionnel</span><span>${fmtEnv(env.plannedAmount, env)}</span></div>` : ''}
-            <div class="line"><span>Dépensé</span><span>${fmtEnv(spent, env)}</span></div>
-            <div class="line reste ${reste<0?'neg':'pos'}"><span>Reste</span><span>${fmtEnv(reste, env)}</span></div>
-            ${tplTransfersIn>0 ? `<div class="line" style="color:var(--green);"><span>Transfert entrant prévu</span><span>+${fmtEnv(tplTransfersIn, env)}</span></div>` : ''}
+            ${envTransfers.length ? `<div class="line" style="color:var(--ink-soft);font-size:11px;" title="Reçu ${fmt(trfInTotal)} — Envoyé ${fmt(trfOutTotal)}"><span>Transferts (total)</span><span style="color:${trfNet<0?'var(--pink)':'var(--green)'};">${trfNet>=0?'+':''}${fmt(trfNet)}</span></div>` : ''}
+            <div class="line"><span>Revenu</span><span>${fmt(env.amount)}</span></div>
+            ${env.plannedAmount ? `<div class="line" style="color:var(--yellow);"><span>Prévisionnel</span><span>${fmt(env.plannedAmount)}</span></div>` : ''}
+            <div class="line"><span>Dépensé</span><span>${fmt(spent)}</span></div>
+            <div class="line reste ${reste<0?'neg':'pos'}"><span>Reste</span><span>${fmt(reste)}</span></div>
+            ${tplTransfersIn>0 ? `<div class="line" style="color:var(--green);"><span>Transfert entrant prévu</span><span>+${fmt(tplTransfersIn)}</span></div>` : ''}
           </div>
           <div class="bar"><div class="bar-fill ${reste<0?'over':''}" style="width:${pct}%;"></div></div>
           <div class="envelope-actions">
-            <button class="tpl-toggle" onclick="toggleTemplates('${env.id}')">Modèles (${templates.length}${tplExpenseTotal>0?' · '+fmtEnv(tplExpenseTotal, env):''}) ▾</button>
-            <button class="tpl-toggle" onclick="toggleTransfers('${env.id}')">Transferts (${envTransfers.length}${envTransfers.length?' · '+(trfNet>=0?'+':'')+fmtEnv(trfNet, env):''}) ▾</button>
+            <button class="tpl-toggle" onclick="toggleTemplates('${env.id}')">Modèles (${templates.length}${tplExpenseTotal>0?' · '+fmt(tplExpenseTotal):''}) ▾</button>
+            <button class="tpl-toggle" onclick="toggleTransfers('${env.id}')">Transferts (${envTransfers.length}${envTransfers.length?' · '+(trfNet>=0?'+':'')+fmt(trfNet):''}) ▾</button>
             <span>
               <button class="del-btn" title="Archiver (masquer sans supprimer)" onclick="archiveEnvelope('${env.id}')">📦</button>
               <button class="del-btn" title="Modifier l'enveloppe" onclick="editEnvelope('${env.id}')">✎</button>
@@ -1716,12 +1674,11 @@ function renderEnvelopes(){
 }
 
 function renderSummary(){
-  const totalRevenuMAD = data.envelopes.reduce((s,e)=>s+toMAD(e.amount, envCurrency(e)),0);
-  const totalDepenseMAD = data.expenses.filter(e=>!e.isTemplate && e.envelopeId)
-    .reduce((s,e)=>s+toMAD(e.amount, envCurrency(getEnvelopeById(e.envelopeId))),0);
-  document.getElementById('sum-revenu').textContent = fmt(totalRevenuMAD);
-  document.getElementById('sum-depense').textContent = fmt(totalDepenseMAD);
-  document.getElementById('sum-reste').textContent = fmt(totalRevenuMAD-totalDepenseMAD);
+  const totalRevenu = data.envelopes.reduce((s,e)=>s+e.amount,0);
+  const totalDepense = data.expenses.filter(e=>!e.isTemplate && e.envelopeId).reduce((s,e)=>s+e.amount,0);
+  document.getElementById('sum-revenu').textContent = fmt(totalRevenu);
+  document.getElementById('sum-depense').textContent = fmt(totalDepense);
+  document.getElementById('sum-reste').textContent = fmt(totalRevenu-totalDepense);
 }
 
 function renderBanner(){
@@ -1787,8 +1744,8 @@ function renderHistory(){
   let summaryHtml = '';
   if(filterActive){
     const label = (filtEnv && filtEnv!=='all') ? escapeHtml(envNameFor(filtEnv)) : (filtType==='besoin' ? 'Besoin' : 'Envie');
-    const sumTotalMAD = list.reduce((s,e)=>s+toMAD(e.amount, envCurrency(getEnvelopeById(e.envelopeId))),0);
-    summaryHtml = `<div class="filter-sum">Filtre : <b>${label}</b> — ${list.length} dépense${list.length>1?'s':''}, total <b>${fmt(sumTotalMAD)}</b>
+    const sumTotal = list.reduce((s,e)=>s+e.amount,0);
+    summaryHtml = `<div class="filter-sum">Filtre : <b>${label}</b> — ${list.length} dépense${list.length>1?'s':''}, total <b>${fmt(sumTotal)}</b>
       <button class="ghost" onclick="clearHistoryFilters()">Réinitialiser</button></div>`;
   }
   summaryHtml += `<div class="check-row" style="margin-bottom:10px;">
@@ -1816,8 +1773,8 @@ function renderHistory(){
       currentGroup.items.push(e);
     });
     rowsHtml = groups.map(g=>{
-      const dayTotalMAD = g.items.reduce((s,e)=>s+toMAD(e.amount, envCurrency(getEnvelopeById(e.envelopeId))),0);
-      const header = `<tr class="day-header-row"><td colspan="6">${g.key==='__unknown__' ? '<span style="font-style:italic;color:var(--ink-soft);">Date inconnue</span>' : g.label} <span style="float:right;color:var(--green);">Total : ${fmt(dayTotalMAD)} (${g.items.length})</span></td></tr>`;
+      const dayTotal = g.items.reduce((s,e)=>s+e.amount,0);
+      const header = `<tr class="day-header-row"><td colspan="6">${g.key==='__unknown__' ? '<span style="font-style:italic;color:var(--ink-soft);">Date inconnue</span>' : g.label} <span style="float:right;color:var(--green);">Total : ${fmt(dayTotal)} (${g.items.length})</span></td></tr>`;
       const rows = g.items.map(e=>historyRowHtml(e, envName)).join('');
       return header + rows;
     }).join('');
@@ -1837,14 +1794,13 @@ function renderHistory(){
 }
 
 function historyRowHtml(e, envName){
-  const env = getEnvelopeById(e.envelopeId);
   return `
     <tr>
       <td>${e.dateUnknown || !e.date ? '<span style="color:var(--ink-soft);font-style:italic;">Date inconnue</span>' : e.date}</td>
       <td>${escapeHtml(e.name)}${e.justification ? `<br><span style="font-size:11px;color:var(--ink-soft);font-style:italic;">📝 ${escapeHtml(e.justification)}</span>` : ''}</td>
       <td>${escapeHtml(envName(e.envelopeId))}</td>
       <td><span class="dot ${e.type}"></span>${e.type==='besoin'?'Besoin':'Envie'}</td>
-      <td class="amt-cell">${fmtEnv(e.amount, env)}</td>
+      <td class="amt-cell">${fmt(e.amount)}</td>
       <td>
         <button class="del-btn" title="Modifier" onclick="editExpense('${e.id}')">✎</button>
         <button class="del-btn" title="Supprimer" onclick="deleteExpense('${e.id}')">✕</button>
@@ -1862,8 +1818,8 @@ function renderApercu(){
   let list = data.expenses.filter(e=>!e.isTemplate && e.envelopeId);
   if(filtMonth!=='all') list = list.filter(e=>e.date && e.date.startsWith(filtMonth));
 
-  const besoinTotal = list.filter(e=>e.type==='besoin').reduce((s,e)=>s+toMAD(e.amount, envCurrency(getEnvelopeById(e.envelopeId))),0);
-  const envieTotal = list.filter(e=>e.type==='envie').reduce((s,e)=>s+toMAD(e.amount, envCurrency(getEnvelopeById(e.envelopeId))),0);
+  const besoinTotal = list.filter(e=>e.type==='besoin').reduce((s,e)=>s+e.amount,0);
+  const envieTotal = list.filter(e=>e.type==='envie').reduce((s,e)=>s+e.amount,0);
   const total = besoinTotal + envieTotal;
   const chart = document.getElementById('apercu-chart');
   const legend = document.getElementById('apercu-legend');
@@ -1894,7 +1850,7 @@ function renderApercu(){
         <div class="apercu-env-row clickable" onclick="goToFiltered('envelope','${env.id}')" title="Voir les dépenses de cette enveloppe">
           <span class="name">${escapeHtml(env.name)}</span>
           <div class="bar"><div class="bar-fill ${spent>env.amount?'over':''}" style="width:${pct}%;"></div></div>
-          <span class="amt">${fmtEnv(spent, env)}</span>
+          <span class="amt">${fmt(spent)}</span>
         </div>`;
     }).join('');
   }
@@ -1905,8 +1861,8 @@ function addCheck(){
   const date = document.getElementById('verif-date').value || todayStr();
   const note = document.getElementById('verif-note').value.trim();
   if(isNaN(amount) || amount < 0){ customAlert('Merci de saisir un montant valide.'); return; }
-  const totalRevenu = data.envelopes.reduce((s,e)=>s+toMAD(e.amount, envCurrency(e)),0);
-  const totalDepense = data.expenses.filter(e=>!e.isTemplate && e.envelopeId).reduce((s,e)=>s+toMAD(e.amount, envCurrency(getEnvelopeById(e.envelopeId))),0);
+  const totalRevenu = data.envelopes.reduce((s,e)=>s+e.amount,0);
+  const totalDepense = data.expenses.filter(e=>!e.isTemplate && e.envelopeId).reduce((s,e)=>s+e.amount,0);
   const theorique = totalRevenu - totalDepense;
   const ecart = amount - theorique;
   if(!data.checks) data.checks = [];
@@ -1954,11 +1910,10 @@ function confirmApplyCheck(id){
   const envelopeId = document.getElementById('verif-apply-envelope').value;
   const env = data.envelopes.find(e=>e.id===envelopeId);
   if(!env){ customAlert('Choisis une enveloppe.'); return; }
-  const ecInEnvCurrency = envCurrency(env)==='FCFA' ? ec * exchangeRate : ec;
-  env.amount += ecInEnvCurrency;
+  env.amount += ec;
   if(!data.topups) data.topups = [];
   data.topups.push({
-    id: uid(), envelopeId, envelopeName: env.name, amount: ecInEnvCurrency,
+    id: uid(), envelopeId, envelopeName: env.name, amount: ec,
     justification: (ec>0?'Surplus':'Déficit') + ' de vérification (pointage du ' + c.date + ')',
     date: todayStr(), createdAt: new Date().toISOString()
   });
@@ -2085,9 +2040,254 @@ function renderSavings(){
   }
   summaryEl.innerHTML = `
     <div class="summary" style="margin-bottom:18px;">
-      <div class="stat revenu"><label>Objectif annuel</label><div class="val">${fmtEnv(yearGoalTotal, envelope)}</div></div>
-      <div class="stat reste"><label>Épargné en ${savingsYear}</label><div class="val">${fmtEnv(yearSavedTotal, envelope)}</div></div>
+      <div class="stat revenu"><label>Objectif annuel</label><div class="val">${fmt(yearGoalTotal)}</div></div>
+      <div class="stat reste"><label>Épargné en ${savingsYear}</label><div class="val">${fmt(yearSavedTotal)}</div></div>
     </div>`;
 
   const currentYear = new Date().getFullYear();
-  const currentMonth = 
+  const currentMonth = new Date().getMonth() + 1;
+
+  monthsEl.innerHTML = CAL_MONTH_NAMES.map((mname, idx)=>{
+    const m = idx + 1;
+    const isCurrent = savingsYear === currentYear && m === currentMonth;
+    const goal = getSavingsGoal(savingsYear, m);
+    const saved = computeSavedForMonth(envelope.id, savingsYear, m);
+    const pct = goal ? Math.min(100, (saved/goal)*100) : 0;
+    const reached = goal && saved >= goal;
+    return `
+      <div class="card-form" style="margin-top:10px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:6px;">
+          <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:14px;">
+            ${mname} ${savingsYear} ${isCurrent ? '<span class="recurring-badge">en cours</span>' : ''}
+            ${reached ? '<span class="recurring-badge" style="border-color:var(--green);color:var(--green);">✓ Objectif atteint</span>' : ''}
+          </div>
+        </div>
+        <div class="row" style="gap:6px;margin-bottom:8px;">
+          <input id="sg-goal-${savingsYear}-${m}" type="number" min="0" step="0.01" placeholder="Objectif du mois (optionnel)" value="${goal!==null?goal:''}" style="flex:1;min-width:150px;font-size:13px;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--paper-alt);color:var(--ink);">
+          <button class="ghost" onclick="setSavingsGoal(${savingsYear}, ${m})">Enregistrer</button>
+        </div>
+        ${goal ? `<div class="bar" style="margin-bottom:6px;"><div class="bar-fill" style="width:${pct}%;"></div></div>` : ''}
+        <div style="font-size:12px;color:var(--ink-soft);">
+          Épargné ce mois : <b style="color:var(--ink);">${fmt(saved)}</b>${goal ? ` / ${fmt(goal)} objectif` : ' (aucun objectif fixé)'}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function renderCalendar(){
+  const label = document.getElementById('calendar-year-label');
+  const container = document.getElementById('calendar-months');
+  if(!label || !container) return;
+  label.textContent = calendarYear;
+
+  const currentYear = new Date().getFullYear();
+  const currentMonth = new Date().getMonth() + 1;
+
+  container.innerHTML = CAL_MONTH_NAMES.map((mname, idx)=>{
+    const m = idx + 1;
+    const isPast = calendarYear < currentYear || (calendarYear === currentYear && m < currentMonth);
+    const isCurrent = calendarYear === currentYear && m === currentMonth;
+    const envs = data.envelopes.filter(e=>e.chargeYear===calendarYear && e.chargeMonth===m);
+    const totalPlanned = envs.filter(e=>!e.notNeeded).reduce((s,e)=>s+(e.plannedAmount||0),0);
+    const totalFunded = envs.reduce((s,e)=>s+e.amount,0);
+    const envsHtml = envs.length ? envs.map(env=>{
+      const spent = envelopeSpent(env.id);
+      const reste = env.amount - spent;
+      const planned = env.plannedAmount;
+      const funded = env.amount > 0;
+      const pct = env.amount>0 ? Math.min(100,(spent/env.amount)*100) : 0;
+      if(env.notNeeded){
+        return `
+        <div class="tpl-item" style="flex-wrap:wrap;align-items:center;opacity:0.55;">
+          <span class="tpl-name" style="min-width:110px;text-decoration:line-through;">${escapeHtml(env.name)}</span>
+          <span style="flex:1;font-size:11.5px;font-style:italic;color:var(--ink-soft);">Non nécessaire ce mois-ci</span>
+          <button class="ghost" onclick="toggleChargeNotNeeded('${env.id}')">Réactiver</button>
+          <button class="del-btn" title="Supprimer" onclick="deleteEnvelope('${env.id}')">✕</button>
+        </div>`;
+      }
+      const isFinished = funded && spent > 0 && reste <= 0;
+      return `
+      <div style="border-bottom:1px solid var(--line);padding:8px 0;${isFinished?'opacity:0.7;':''}">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px;">
+          <span class="tpl-name clickable" onclick="goToFiltered('envelope','${env.id}')" style="font-weight:600;${isFinished?'text-decoration:line-through;':''}">${escapeHtml(env.name)} ↗</span>
+          ${isFinished ? '<span class="recurring-badge" style="border-color:var(--green);color:var(--green);">✓ Terminé</span>' : ''}
+          <span>
+            <button class="ghost" title="Marquer non nécessaire ce mois-ci" onclick="toggleChargeNotNeeded('${env.id}')">⏸</button>
+            <button class="ghost" onclick="editEnvelope('${env.id}')">✎</button>
+            <button class="del-btn" title="Supprimer" onclick="deleteEnvelope('${env.id}')">✕</button>
+          </span>
+        </div>
+        <div style="font-size:11.5px;color:var(--ink-soft);margin-bottom:4px;">
+          ${planned ? `Prévisionnel : ${fmt(planned)} — ` : ''}${funded ? `Financé : ${fmt(env.amount)}` : 'Pas encore financé'}
+        </div>
+        ${funded ? `<div class="bar" style="margin-bottom:4px;"><div class="bar-fill ${reste<0?'over':''}" style="width:${pct}%;"></div></div>
+        <div style="font-size:12px;color:var(--ink);">Dépensé : <b>${fmt(spent)}</b> — Reste : <b style="color:${reste<0?'var(--pink)':'var(--green)'};">${fmt(reste)}</b></div>` : ''}
+      </div>`;
+    }).join('') : '<div style="font-size:12px;color:var(--ink-soft);padding:4px 0;">Aucune charge pour ce mois.</div>';
+
+    return `
+      <div class="card-form" style="margin-top:12px;${isPast?'opacity:0.55;':''}">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px;">
+          <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:14px;">
+            ${mname} ${calendarYear} ${isCurrent ? '<span class="recurring-badge">en cours</span>' : ''}
+          </div>
+          ${envs.length ? `<button class="ghost" style="border-color:var(--pink);color:var(--pink);font-size:11px;padding:5px 8px;" onclick="deleteAllChargesForMonth(${calendarYear}, ${m})">Tout supprimer</button>` : ''}
+        </div>
+        ${envs.length ? `<div style="font-size:11.5px;color:var(--ink-soft);margin-bottom:10px;">Total prévisionnel : <b style="color:var(--yellow);">${fmt(totalPlanned)}</b> — Total financé : <b style="color:var(--green);">${fmt(totalFunded)}</b></div>` : ''}
+        <div style="margin-bottom:10px;">${envsHtml}</div>
+        <div class="row" style="gap:6px;">
+          <input id="mc-name-${calendarYear}-${m}" type="text" placeholder="Ex: Loyer, Nourriture..." style="flex:1;min-width:120px;font-size:13px;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--paper-alt);color:var(--ink);">
+          <input id="mc-amount-${calendarYear}-${m}" type="number" min="0" step="0.01" placeholder="Montant (optionnel)" style="flex:1;min-width:90px;font-size:13px;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--paper-alt);color:var(--ink);">
+          <button class="ghost" onclick="addMonthCharge(${calendarYear}, ${m})">+ Ajouter</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function renderAllTemplates(){
+  const expContainer = document.getElementById('all-expense-templates');
+  const trfContainer = document.getElementById('all-transfer-templates');
+  if(!expContainer || !trfContainer) return;
+
+  const expTemplates = data.expenses.filter(e=>e.isTemplate)
+    .slice().sort((a,b)=> (a.envelopeId||'').localeCompare(b.envelopeId||''));
+  expContainer.innerHTML = expTemplates.length ? expTemplates.map(t=>{
+    const env = data.envelopes.find(e=>e.id===t.envelopeId);
+    const envName = env ? env.name : '—';
+    const reste = env ? env.amount - envelopeSpent(env.id) : null;
+    const projected = reste!==null ? reste - t.amount : null;
+    return `
+    <div class="tpl-item" style="flex-wrap:wrap;">
+      <span class="tpl-name"><span class="tpl-tag ${t.type}"></span><b>${escapeHtml(envName)}</b> — ${escapeHtml(t.name)}
+        ${projected!==null ? `<span style="color:${projected<0?'var(--pink)':'var(--ink-soft)'};font-size:11px;"> — resterait ${fmt(projected)}</span>` : ''}
+      </span>
+      <span class="tpl-amt">${fmt(t.amount)}</span>
+      <button class="ghost" onclick="editExpense('${t.id}')">Modifier</button>
+      <button class="ghost" onclick="activateTemplate('${t.id}')">Ajouter</button>
+      <button class="del-btn" title="Supprimer" onclick="deleteExpense('${t.id}')">✕</button>
+    </div>`;
+  }).join('') : '<div class="empty-note">Aucun modèle de dépense, toutes enveloppes confondues.</div>';
+
+  const trfTemplates = (data.transfers || []).filter(t=>t.isTemplate);
+  trfContainer.innerHTML = trfTemplates.length ? trfTemplates.map(t=>{
+    const fromEnv = data.envelopes.find(e=>e.id===t.fromId);
+    const toEnv = data.envelopes.find(e=>e.id===t.toId);
+    const fromReste = fromEnv ? fromEnv.amount - envelopeSpent(fromEnv.id) : null;
+    const toReste = toEnv ? toEnv.amount - envelopeSpent(toEnv.id) : null;
+    const projLabel = (fromReste!==null && toReste!==null)
+      ? `<span style="color:var(--ink-soft);font-size:11px;"> — ${escapeHtml(t.fromName)} resterait ${fmt(fromReste - t.amount)}, ${escapeHtml(t.toName)} resterait ${fmt(toReste + t.amount)}</span>` : '';
+    return `
+    <div class="tpl-item" style="flex-wrap:wrap;">
+      <span class="tpl-name">${escapeHtml(t.fromName)} → ${escapeHtml(t.toName)}${projLabel}</span>
+      <span class="tpl-amt">${fmt(t.amount)}</span>
+      <button class="ghost" onclick="activateTransferTemplate('${t.id}')">Transférer</button>
+      <button class="del-btn" title="Supprimer" onclick="deleteTransfer('${t.id}')">✕</button>
+    </div>`;
+  }).join('') : '<div class="empty-note">Aucun modèle de transfert.</div>';
+}
+
+function renderVerif(){
+  const totalRevenu = data.envelopes.reduce((s,e)=>s+e.amount,0);
+  const totalDepense = data.expenses.filter(e=>!e.isTemplate && e.envelopeId).reduce((s,e)=>s+e.amount,0);
+  const theorique = totalRevenu - totalDepense;
+  document.getElementById('verif-theorique').textContent = fmt(theorique);
+
+  const checks = (data.checks || []).slice().sort((a,b)=> (b.date+b.createdAt).localeCompare(a.date+a.createdAt));
+  const last = checks[0];
+  const declareEl = document.getElementById('verif-declare');
+  const ecartEl = document.getElementById('verif-ecart');
+  const ecartLabel = document.getElementById('verif-ecart-label');
+  const ecartCard = document.getElementById('verif-ecart-card');
+
+  if(!last){
+    declareEl.textContent = '—';
+    ecartEl.textContent = '—';
+    ecartLabel.textContent = 'Écart';
+  } else {
+    declareEl.textContent = fmt(last.reel);
+    const ecartNow = last.reel - theorique;
+    ecartEl.textContent = (ecartNow > 0 ? '+' : '') + fmt(ecartNow);
+    if(ecartNow < 0){
+      ecartLabel.textContent = 'Déficit';
+      ecartCard.className = 'stat depense';
+    } else if(ecartNow > 0){
+      ecartLabel.textContent = 'Surplus';
+      ecartCard.className = 'stat revenu';
+    } else {
+      ecartLabel.textContent = 'Équilibré';
+      ecartCard.className = 'stat reste';
+    }
+  }
+
+  const container = document.getElementById('verif-history');
+  if(checks.length===0){
+    container.innerHTML = '<div class="empty-note">Aucun pointage enregistré. Déclare ce que tu as réellement en main pour comparer.</div>';
+    return;
+  }
+  container.innerHTML = `
+    <div class="table-scroll">
+    <table class="history">
+      <thead><tr><th>Date</th><th style="text-align:right;">Théorique</th><th style="text-align:right;">Réel déclaré</th><th style="text-align:right;">Écart</th><th>Note</th><th></th></tr></thead>
+      <tbody>
+        ${checks.map(c=>{
+          const ec = c.reel - c.theorique;
+          const color = ec < 0 ? 'var(--pink)' : (ec > 0 ? 'var(--green)' : 'var(--ink-soft)');
+          return `<tr>
+            <td>${c.date}</td>
+            <td class="amt-cell">${fmt(c.theorique)}</td>
+            <td class="amt-cell">${fmt(c.reel)}</td>
+            <td class="amt-cell" style="color:${color};font-weight:700;">${(ec>0?'+':'')+fmt(ec)}</td>
+            <td style="color:var(--ink-soft);max-width:180px;">${c.note ? escapeHtml(c.note) : '—'}</td>
+            <td style="white-space:nowrap;">
+              ${ec===0 ? '' : c.applied
+                ? '<span style="font-size:11px;color:var(--ink-soft);">✓ Appliqué</span>'
+                : `<button class="ghost" title="Appliquer cet écart à une enveloppe" onclick="startApplyCheck('${c.id}')">↔ Appliquer</button>`}
+              <button class="del-btn" title="Supprimer" onclick="deleteCheck('${c.id}')">✕</button>
+            </td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+    </div>
+    <div id="verif-apply-panel"></div>`;
+}
+
+function renderAll(){
+  renderSelects();
+  populateMonthOptions();
+  renderEnvelopes();
+  renderSummary();
+  renderBanner();
+  renderHistory();
+  renderApercu();
+  renderVerif();
+  renderTransferHistory();
+  renderTopupHistory();
+  renderUnassigned();
+  renderAllTemplates();
+  renderCalendar();
+  renderSavings();
+  updateUndoButton();
+}
+
+function tickClock(){
+  const d = new Date();
+  document.getElementById('clock-time').textContent = d.toLocaleTimeString('fr-FR');
+  document.getElementById('clock-date').textContent = d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+}
+setInterval(tickClock, 1000);
+tickClock();
+
+load();
+</script>
+
+<script>
+// Enregistrement du service worker pour le fonctionnement hors-ligne (PWA)
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch((err) => {
+      console.warn('Échec d\'enregistrement du service worker :', err);
+    });
+  });
+}
+          </script>
