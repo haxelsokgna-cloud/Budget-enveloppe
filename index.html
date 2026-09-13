@@ -1,0 +1,2293 @@
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+<!-- PWA : manifest, thème, icônes -->
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#0A0E14">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Enveloppes">
+<link rel="icon" href="./icon-192.png">
+<link rel="apple-touch-icon" href="./icon-192.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"></noscript>
+<style>
+  :root{
+    --bg:#0A0E14;
+    --paper:#12161F;
+    --paper-alt:#171C27;
+    --ink:#EAF4FF;
+    --ink-soft:#7C8AA0;
+    --line:#232B38;
+    --green:#39FF88;
+    --green-dim:#1E7A4C;
+    --blue:#33E1FF;
+    --blue-soft:rgba(51,225,255,0.12);
+    --pink:#FF3DB0;
+    --pink-soft:rgba(255,61,176,0.12);
+    --yellow:#F5FF3D;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  body,html{margin:0;padding:0;}
+  #app{
+    font-family:'Inter',system-ui,sans-serif;
+    background:var(--bg);
+    color:var(--ink);
+    min-height:100vh;
+    padding:24px 20px 80px;
+  }
+  .wrap{max-width:980px;margin:0 auto;}
+
+  /* Header */
+  .topbar{
+    display:flex;justify-content:space-between;align-items:flex-start;
+    margin-bottom:20px;flex-wrap:wrap;gap:10px;
+  }
+  .topbar h1{
+    font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:26px;
+    margin:0;letter-spacing:-0.01em;color:var(--green);
+    text-shadow:0 0 14px rgba(57,255,136,0.45);
+  }
+  .topbar .sub{color:var(--ink-soft);font-size:12.5px;margin-top:4px;}
+  .clock{
+    text-align:right;font-family:'JetBrains Mono',monospace;
+    color:var(--blue);font-size:12.5px;line-height:1.5;
+    background:var(--paper);border:1px solid var(--line);
+    border-radius:var(--radius);padding:8px 14px;
+  }
+  .clock b{font-size:14px;display:block;color:var(--ink);}
+
+  /* Global summary */
+  .summary{
+    display:grid;grid-template-columns:repeat(3,1fr);gap:10px;
+    margin-bottom:26px;
+  }
+  .summary .stat{
+    background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);
+    padding:14px 16px;position:relative;
+  }
+  .summary .stat.revenu{border-color:var(--green-dim);box-shadow:inset 0 0 0 1px rgba(57,255,136,0.08);}
+  .summary .stat.reste{border-color:var(--blue);box-shadow:0 0 18px rgba(51,225,255,0.12);}
+  .summary .stat.depense{border-color:var(--pink);box-shadow:0 0 18px rgba(255,61,176,0.10);}
+  .summary .stat label{
+    font-size:10.5px;text-transform:uppercase;letter-spacing:0.08em;
+    color:var(--ink-soft);display:block;margin-bottom:6px;
+  }
+  .summary .stat.revenu .val{color:var(--green);}
+  .summary .stat.reste .val{color:var(--blue);}
+  .summary .stat.depense .val{color:var(--pink);}
+  .summary .stat .val{
+    font-family:'JetBrains Mono',monospace;font-size:19px;font-weight:700;
+  }
+
+  .clickable{cursor:pointer;transition:opacity .12s ease;}
+  table.history th.sortable{cursor:pointer;user-select:none;}
+  table.history th.sortable:hover{color:var(--green);}
+  tr.day-header-row td{
+    background:var(--paper-alt);font-weight:700;font-family:'Space Grotesk',sans-serif;
+    font-size:12.5px;padding:8px 12px;border-bottom:1px solid var(--line);color:var(--ink);
+  }
+  .clickable:hover{opacity:0.75;}
+  .envelope-name.clickable{color:var(--green);}
+  .envelope-name.clickable:hover{text-shadow:0 0 10px rgba(57,255,136,0.5);opacity:1;}
+  .recurring-badge{
+    display:inline-block;font-size:10px;font-weight:600;color:var(--blue);
+    background:var(--blue-soft);border:1px solid var(--blue);border-radius:20px;
+    padding:2px 8px;margin-left:6px;vertical-align:middle;text-transform:none;letter-spacing:0;
+  }
+  .filter-sum{
+    display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+    background:var(--paper-alt);border:1px solid var(--line);border-radius:var(--radius);
+    padding:10px 14px;margin-bottom:12px;font-size:13px;color:var(--ink-soft);
+  }
+  .filter-sum b{color:var(--ink);}
+
+  /* Overspend banner */
+  .custom-confirm-overlay{
+    position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.65);
+    z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;
+  }
+  .custom-confirm-box{
+    background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);
+    padding:20px;max-width:360px;width:100%;box-shadow:0 12px 40px rgba(0,0,0,0.5);
+  }
+  #custom-confirm-message{color:var(--ink);font-size:14px;line-height:1.5;margin-bottom:18px;white-space:pre-line;}
+  .custom-confirm-actions{display:flex;gap:8px;justify-content:flex-end;}
+
+  .overspend-banner{
+    display:flex;align-items:center;gap:8px;background:var(--pink-soft);
+    border:1px solid var(--pink);color:var(--pink);border-radius:var(--radius);
+    padding:10px 14px;font-size:13px;font-weight:600;margin-bottom:16px;
+  }
+
+  /* Month bar */
+  .month-bar{
+    display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;
+  }
+  .month-bar label{font-size:11px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.05em;}
+  .month-bar select{
+    font-family:'Inter';font-size:13px;padding:7px 10px;border:1px solid var(--line);
+    border-radius:6px;background:var(--paper);color:var(--ink);
+  }
+  .month-bar .hint{font-size:11.5px;color:var(--ink-soft);}
+
+  /* Apercu chart */
+  .apercu-chart{
+    width:130px;height:130px;border-radius:50%;flex-shrink:0;
+    background:conic-gradient(var(--line) 0deg 360deg);
+    box-shadow:0 0 24px rgba(51,225,255,0.12);
+  }
+  .apercu-legend{display:flex;flex-direction:column;gap:10px;font-size:13px;}
+  .apercu-legend .leg-row{display:flex;align-items:center;gap:8px;}
+  .apercu-legend .leg-row b{font-family:'JetBrains Mono',monospace;margin-left:auto;padding-left:16px;}
+  .apercu-env-row{
+    display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px;
+  }
+  .apercu-env-row:last-child{border-bottom:none;}
+  .apercu-env-row .name{min-width:110px;color:var(--ink-soft);}
+  .apercu-env-row .bar{flex:1;margin-bottom:0;}
+  .apercu-env-row .amt{font-family:'JetBrains Mono',monospace;min-width:90px;text-align:right;}
+
+  /* Tabs */
+  .tabs{
+    display:flex;gap:8px;margin-bottom:22px;border-bottom:1px solid var(--line);
+    flex-wrap:wrap;
+  }
+  .tab-btn{
+    background:transparent;border:none;color:var(--ink-soft);
+    font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;
+    padding:10px 4px;cursor:pointer;position:relative;margin-bottom:-1px;
+    border-bottom:2px solid transparent;transition:all .15s ease;
+  }
+  .tab-btn:hover{color:var(--ink);}
+  .tab-btn.active{color:var(--green);border-bottom-color:var(--green);text-shadow:0 0 10px rgba(57,255,136,0.5);}
+  .tab-panel{animation:fadeIn .18s ease;}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
+
+  /* Section titles */
+  h2.section{
+    font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:600;
+    margin:30px 0 12px;padding-bottom:8px;border-bottom:1px solid var(--line);
+    display:flex;align-items:center;justify-content:space-between;
+    color:var(--ink);text-transform:uppercase;letter-spacing:0.04em;
+  }
+  h2.section .hint{font-family:'Inter';font-size:11.5px;font-weight:400;color:var(--ink-soft);text-transform:none;letter-spacing:0;}
+
+  /* Forms */
+  .card-form{
+    background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);
+    padding:14px;margin-bottom:16px;
+  }
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;}
+  .field{display:flex;flex-direction:column;gap:5px;flex:1;min-width:130px;}
+  .field label{font-size:10.5px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.05em;}
+  .field input, .field select{
+    font-family:'Inter';font-size:14px;padding:9px 10px;border:1px solid var(--line);
+    border-radius:6px;background:var(--paper-alt);color:var(--ink);
+  }
+  .field input:focus, .field select:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 3px rgba(57,255,136,0.15);}
+  .toggle-row{display:flex;gap:8px;align-items:center;}
+  .type-btn{
+    flex:1;padding:9px 10px;border-radius:6px;border:1px solid var(--line);
+    background:var(--paper-alt);color:var(--ink-soft);cursor:pointer;font-size:13px;font-weight:600;text-align:center;
+    transition:all .12s ease;
+  }
+  .type-btn.besoin.active{background:var(--blue-soft);border-color:var(--blue);color:var(--blue);box-shadow:0 0 10px rgba(51,225,255,0.25);}
+  .type-btn.envie.active{background:var(--pink-soft);border-color:var(--pink);color:var(--pink);box-shadow:0 0 10px rgba(255,61,176,0.25);}
+  .check-row{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-soft);}
+  button.primary{
+    background:var(--green);color:#0A0E14;border:none;border-radius:6px;
+    padding:9px 18px;font-size:14px;font-weight:700;cursor:pointer;
+    box-shadow:0 0 14px rgba(57,255,136,0.35);
+  }
+  button.primary:hover{background:#5CFFA0;}
+  button.ghost, label.ghost{
+    background:transparent;border:1px solid var(--line);color:var(--ink-soft);
+    border-radius:6px;padding:6px 10px;font-size:12px;cursor:pointer;
+  }
+  button.ghost:hover, label.ghost:hover{border-color:var(--blue);color:var(--blue);}
+  button.ghost:disabled{opacity:0.35;cursor:not-allowed;}
+  button.ghost:disabled:hover{border-color:var(--line);color:var(--ink-soft);}
+  label.ghost{cursor:pointer;}
+  select#exp-envelope:disabled, input:disabled{background:#1a1f29;color:#556;}
+
+  /* Envelope cards */
+  .envelopes-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:16px;}
+  .envelope-card{
+    position:relative;background:var(--paper);border:1px solid var(--line);
+    border-radius:var(--radius);overflow:hidden;
+    transition:box-shadow .18s ease, opacity .18s ease;
+  }
+  .envelope-flap{
+    height:4px;width:100%;
+    background:linear-gradient(90deg,var(--green),var(--blue));
+  }
+  .envelope-seal{display:none;}
+  .drag-handle{
+    position:absolute;top:6px;right:8px;z-index:5;cursor:grab;touch-action:none;
+    color:var(--ink-soft);font-size:16px;padding:4px 6px;user-select:none;line-height:1;
+  }
+  .drag-handle:hover{color:var(--green);}
+  .envelope-card.dragging{opacity:0.55;box-shadow:0 10px 28px rgba(0,0,0,0.45);z-index:10;}
+  .envelope-body{padding:16px;}
+  .envelope-name{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:15px;margin:0 0 10px;text-align:left;color:var(--ink);}
+  .envelope-figures{display:flex;flex-direction:column;gap:5px;font-family:'JetBrains Mono',monospace;font-size:12.5px;margin-bottom:10px;color:var(--ink-soft);}
+  .envelope-figures .line{display:flex;justify-content:space-between;}
+  .envelope-figures .line.reste{font-weight:700;border-top:1px dashed var(--line);padding-top:6px;margin-top:2px;color:var(--ink);}
+  .envelope-figures .line.reste.neg{color:var(--pink);}
+  .envelope-figures .line.reste.pos{color:var(--green);}
+  .bar{height:5px;border-radius:3px;background:var(--line);overflow:hidden;margin-bottom:12px;}
+  .bar-fill{height:100%;background:var(--green);box-shadow:0 0 8px rgba(57,255,136,0.6);}
+  .bar-fill.over{background:var(--pink);box-shadow:0 0 8px rgba(255,61,176,0.6);}
+  .envelope-actions{display:flex;justify-content:space-between;align-items:center;}
+  .tpl-toggle{font-size:11.5px;color:var(--blue);cursor:pointer;background:none;border:none;font-weight:600;}
+  .templates-list{margin-top:10px;border-top:1px dashed var(--line);padding-top:10px;display:none;}
+  .templates-list.open{display:block;}
+  .tpl-item{
+    display:flex;justify-content:space-between;align-items:center;font-size:12px;
+    padding:6px 0;border-bottom:1px solid var(--line);gap:6px;flex-wrap:wrap;
+  }
+  .tpl-item:last-child{border-bottom:none;}
+  .tpl-name{flex:1;color:var(--ink-soft);}
+  .tpl-tag{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:5px;}
+  .tpl-tag.besoin{background:var(--blue);box-shadow:0 0 6px var(--blue);}
+  .tpl-tag.envie{background:var(--pink);box-shadow:0 0 6px var(--pink);}
+  .tpl-amt{font-family:'JetBrains Mono',monospace;color:var(--ink-soft);}
+  .empty-note{color:var(--ink-soft);font-size:13px;padding:20px;text-align:center;border:1px dashed var(--line);border-radius:var(--radius);}
+
+  /* Expense history */
+  .history-filters{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;}
+  select.filter{font-family:'Inter';font-size:12.5px;padding:7px 8px;border:1px solid var(--line);border-radius:6px;background:var(--paper-alt);color:var(--ink);}
+  table.history{width:100%;border-collapse:collapse;background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;font-size:13px;}
+  table.history th{
+    text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:0.05em;
+    color:var(--ink-soft);padding:10px 12px;border-bottom:1px solid var(--line);background:var(--paper-alt);
+  }
+  table.history td{padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:middle;color:var(--ink);}
+  table.history tr:last-child td{border-bottom:none;}
+  .dot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:6px;}
+  .dot.besoin{background:var(--blue);box-shadow:0 0 6px var(--blue);}
+  .dot.envie{background:var(--pink);box-shadow:0 0 6px var(--pink);}
+  .amt-cell{font-family:'JetBrains Mono',monospace;text-align:right;}
+  .del-btn{background:none;border:none;color:var(--ink-soft);cursor:pointer;font-size:14px;line-height:1;padding:2px 4px;}
+  .del-btn:hover{color:var(--pink);}
+
+  .table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:var(--radius);}
+  .table-scroll table.history{min-width:520px;}
+
+  ::placeholder{color:#4A5568;}
+
+  @media (max-width: 640px){
+    #app{padding:16px 12px 60px;}
+    .topbar{flex-direction:column;align-items:stretch;}
+    .topbar h1{font-size:22px;}
+    .topbar > div:last-child{align-items:stretch;width:100%;}
+    .clock{text-align:left;}
+    .topbar > div:last-child > div{width:100%;}
+    .topbar > div:last-child button.ghost, .topbar > div:last-child label.ghost{flex:1;text-align:center;}
+    .summary{grid-template-columns:1fr;gap:8px;}
+    .summary .stat{padding:12px 14px;}
+    .summary .stat .val{font-size:18px;}
+    h2.section{font-size:13px;margin:22px 0 10px;flex-wrap:wrap;gap:4px;}
+    .card-form{padding:12px;}
+    .row{flex-direction:column;align-items:stretch;gap:10px;}
+    .field{min-width:100%;}
+    .row button.primary, .row button.ghost{width:100%;padding:11px 18px;}
+    .toggle-row{width:100%;}
+    .check-row{flex-wrap:wrap;}
+    .envelopes-grid{grid-template-columns:1fr;gap:12px;}
+    .history-filters{flex-direction:column;}
+    select.filter{width:100%;}
+    table.history th, table.history td{padding:8px;font-size:12px;}
+    .tabs{gap:4px;overflow-x:auto;flex-wrap:nowrap;}
+    .tab-btn{font-size:12.5px;padding:9px 6px;white-space:nowrap;}
+    .month-bar{width:100%;}
+    .month-bar select{flex:1;}
+    .apercu-chart{width:100px;height:100px;}
+    .apercu-env-row{flex-wrap:wrap;}
+    .apercu-env-row .name{min-width:100%;}
+    .apercu-env-row .bar{width:100%;}
+  }
+</style>
+
+<div id="custom-confirm-overlay" class="custom-confirm-overlay" style="display:none;">
+  <div class="custom-confirm-box">
+    <div id="custom-confirm-message"></div>
+    <div class="custom-confirm-actions">
+      <button class="ghost" id="custom-confirm-cancel">Annuler</button>
+      <button class="primary" id="custom-confirm-ok">Confirmer</button>
+    </div>
+  </div>
+</div>
+
+<div id="app">
+  <div class="wrap">
+    <div class="topbar">
+      <div>
+        <h1>Enveloppes</h1>
+        <div class="sub">Suivi de dépenses par revenu — besoin en bleu, envie en rouge</div>
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:8px;">
+          <select id="session-select" onchange="switchSession(this.value)" style="font-size:12.5px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--paper);color:var(--ink);"></select>
+          <button class="ghost" onclick="toggleNewSessionForm()" style="font-size:11px;padding:6px 8px;">+ Nouvelle session</button>
+          <button class="ghost" onclick="deleteCurrentSession()" style="font-size:11px;padding:6px 8px;border-color:var(--pink);color:var(--pink);">Supprimer cette session</button>
+        </div>
+        <div id="new-session-form" style="display:none;align-items:center;gap:6px;margin-top:6px;">
+          <input id="new-session-name" type="text" placeholder="Nom de la session (ex: Voyage Gabon)" style="font-size:12.5px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--paper-alt);color:var(--ink);">
+          <button class="primary" onclick="confirmCreateSession()" style="font-size:12px;padding:6px 10px;">Créer</button>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+        <button class="ghost" id="currency-toggle" onclick="toggleCurrency()" style="font-weight:700;">MAD ⇄ FCFA</button>
+        <div id="rate-editor" style="display:none;align-items:center;gap:4px;font-size:11px;color:var(--ink-soft);">
+          1 MAD = <input id="rate-input" type="number" min="0" step="0.01" value="60" onchange="updateExchangeRate()" style="width:55px;font-size:11px;padding:3px 5px;border:1px solid var(--line);border-radius:4px;background:var(--paper-alt);color:var(--ink);"> FCFA
+        </div>
+        <div class="clock">
+          <b id="clock-time">--:--:--</b>
+          <span id="clock-date">--</span>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="ghost" id="undo-btn" onclick="undoLast()" disabled>↩ Annuler</button>
+          <button class="ghost" onclick="exportData()">Exporter (sauvegarde)</button>
+          <label for="import-file" class="ghost" style="display:inline-block;">Importer</label>
+          <input type="file" id="import-file" accept="application/json,.json" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;" onchange="importData(event)">
+          <button class="ghost" onclick="resetAllData()" style="border-color:var(--pink);color:var(--pink);">Réinitialiser tout</button>
+          <button class="ghost" onclick="loadExampleData()" style="border-color:var(--green);color:var(--green);">Charger un exemple</button>
+        </div>
+        <span id="storage-mode" style="font-size:11px;color:var(--ink-soft);"></span>
+      </div>
+    </div>
+
+    <div class="summary">
+      <div class="stat revenu"><label>Revenu total</label><div class="val" id="sum-revenu">0 MAD</div></div>
+      <div class="stat depense"><label>Dépensé total</label><div class="val" id="sum-depense">0 MAD</div></div>
+      <div class="stat reste"><label>Reste total</label><div class="val" id="sum-reste">0 MAD</div></div>
+    </div>
+
+    <div id="overspend-banner" class="overspend-banner" style="display:none;"></div>
+
+    <div class="month-bar">
+      <label for="month-select">Mois</label>
+      <select id="month-select" onchange="onMonthChange()"></select>
+      <span class="hint">filtre l'historique et l'aperçu ci-dessous</span>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" id="tab-btn-envelopes" onclick="showTab('envelopes')">💠 Enveloppes</button>
+      <button class="tab-btn" id="tab-btn-unassigned" onclick="showTab('unassigned')">📥 À classer</button>
+      <button class="tab-btn" id="tab-btn-expense" onclick="showTab('expense')">➕ Dépense</button>
+      <button class="tab-btn" id="tab-btn-history" onclick="showTab('history')">🕓 Historique</button>
+      <button class="tab-btn" id="tab-btn-apercu" onclick="showTab('apercu')">📊 Aperçu</button>
+      <button class="tab-btn" id="tab-btn-templates" onclick="showTab('templates')">📋 Modèles</button>
+      <button class="tab-btn" id="tab-btn-calendar" onclick="showTab('calendar')">📅 Charges par mois</button>
+      <button class="tab-btn" id="tab-btn-savings" onclick="showTab('savings')">🎯 Épargne annuelle</button>
+      <button class="tab-btn" id="tab-btn-verif" onclick="showTab('verif')">🧮 Vérification</button>
+    </div>
+
+    <div class="tab-panel" id="panel-envelopes">
+      <h2 class="section">Nouvelle enveloppe (revenu)</h2>
+      <div class="card-form">
+        <div class="row">
+          <div class="field">
+            <label>Nom (ex: Salaire, Freelance...)</label>
+            <input id="env-name" type="text" placeholder="Salaire juillet">
+          </div>
+          <div class="field">
+            <label>Montant (MAD)</label>
+            <input id="env-amount" type="number" min="0" step="0.01" placeholder="5000">
+          </div>
+          <div class="field">
+            <label>Objectif à atteindre (optionnel)</label>
+            <input id="env-goal" type="number" min="0" step="0.01" placeholder="Ex: 1500 pour le loyer">
+          </div>
+          <div class="field">
+            <label>Date d'ajout</label>
+            <input id="env-date" type="date">
+          </div>
+          <div class="field" style="max-width:260px;">
+            <label>&nbsp;</label>
+            <div class="check-row">
+              <input type="checkbox" id="env-date-unknown" onchange="toggleDateUnknown('env')">
+              <label for="env-date-unknown" style="text-transform:none;letter-spacing:0;">Je ne sais pas / j'ai peut-être oublié</label>
+            </div>
+          </div>
+          <div class="field" style="max-width:260px;">
+            <label>&nbsp;</label>
+            <div class="check-row">
+              <input type="checkbox" id="env-recurring">
+              <label for="env-recurring" style="text-transform:none;letter-spacing:0;">Revenu récurrent (régénéré chaque mois)</label>
+            </div>
+          </div>
+          <button class="primary" id="env-submit-btn" onclick="saveEnvelope()">Ajouter l'enveloppe</button>
+          <button class="ghost" id="env-cancel-btn" style="display:none;" onclick="cancelEnvelopeEdit()">Annuler</button>
+        </div>
+      </div>
+
+      <h2 class="section">Enveloppes <span class="hint">total dépensé / reste par enveloppe · les charges par mois sont dans l'onglet 📅 dédié</span></h2>
+      <div id="envelopes-grid" class="envelopes-grid"></div>
+
+      <button class="tpl-toggle" style="margin:14px 0 8px;" onclick="toggleArchivedSection()" id="archived-toggle">Enveloppes archivées (0) ▾</button>
+      <div id="archived-envelopes" class="templates-list"></div>
+
+      <h2 class="section">Ajouter de l'argent à une enveloppe <span class="hint">apport ponctuel, avec justificatif</span></h2>
+      <div class="card-form">
+        <div class="row">
+          <div class="field">
+            <label>Enveloppe</label>
+            <select id="topup-envelope"></select>
+          </div>
+          <div class="field">
+            <label>Montant (MAD)</label>
+            <input id="topup-amount" type="number" min="0" step="0.01" placeholder="300">
+          </div>
+          <div class="field">
+            <label>Date</label>
+            <input id="topup-date" type="date">
+          </div>
+          <div class="field" style="min-width:220px;">
+            <label>Justificatif</label>
+            <input id="topup-justification" type="text" placeholder="Ex: prime, remboursement, cadeau...">
+          </div>
+          <button class="primary" onclick="addTopup()">Ajouter l'argent</button>
+        </div>
+      </div>
+      <div id="topup-history"></div>
+
+      <h2 class="section">Transférer entre enveloppes <span class="hint">déplace une somme d'une enveloppe à une autre</span></h2>
+      <div class="card-form">
+        <div class="row">
+          <div class="field">
+            <label>De</label>
+            <select id="transfer-from"></select>
+          </div>
+          <div class="field">
+            <label>Vers</label>
+            <select id="transfer-to"></select>
+          </div>
+          <div class="field">
+            <label>Montant (MAD)</label>
+            <input id="transfer-amount" type="number" min="0" step="0.01" placeholder="200">
+          </div>
+          <div class="field">
+            <label>Date</label>
+            <input id="transfer-date" type="date">
+          </div>
+          <div class="field" style="max-width:260px;">
+            <label>&nbsp;</label>
+            <div class="check-row">
+              <input type="checkbox" id="transfer-template">
+              <label for="transfer-template" style="text-transform:none;letter-spacing:0;">Enregistrer comme modèle (ne transfère pas)</label>
+            </div>
+          </div>
+          <button class="primary" onclick="addTransfer()">Transférer</button>
+        </div>
+      </div>
+      <h2 class="section">Modèles de transfert <span class="hint">à activer manuellement, sans effet tant que non activés</span></h2>
+      <div id="transfer-templates"></div>
+      <h2 class="section">Historique des transferts <span class="hint" id="transfer-total-hint"></span></h2>
+      <div id="transfer-history"></div>
+    </div>
+
+    <div class="tab-panel" id="panel-unassigned" style="display:none;">
+      <h2 class="section">Dépenses à classer <span class="hint">note-les d'abord, associe une enveloppe plus tard</span></h2>
+      <div class="card-form">
+        <div class="row">
+          <div class="field">
+            <label>Description</label>
+            <input id="u-name" type="text" placeholder="Ex: Réparation voiture">
+          </div>
+          <div class="field">
+            <label>Montant (MAD)</label>
+            <input id="u-amount" type="number" min="0" step="0.01" placeholder="150">
+          </div>
+          <div class="field">
+            <label>Date</label>
+            <input id="u-date" type="date">
+          </div>
+          <div class="field" style="max-width:200px;">
+            <label>&nbsp;</label>
+            <div class="check-row">
+              <input type="checkbox" id="u-date-unknown" onchange="toggleDateUnknown('u')">
+              <label for="u-date-unknown" style="text-transform:none;letter-spacing:0;">Je ne sais pas</label>
+            </div>
+          </div>
+        </div>
+        <div class="row" style="margin-top:10px;">
+          <div class="field" style="max-width:220px;">
+            <label>Type</label>
+            <div class="toggle-row">
+              <button type="button" class="type-btn besoin active" id="u-btn-besoin" onclick="setUnassignedType('besoin')">Besoin</button>
+              <button type="button" class="type-btn envie" id="u-btn-envie" onclick="setUnassignedType('envie')">Envie</button>
+            </div>
+          </div>
+          <div class="field" id="u-justification-field">
+            <label>Justification (pourquoi ce besoin ?)</label>
+            <input id="u-justification" type="text" placeholder="Ex: facture santé, loyer...">
+          </div>
+          <button class="primary" onclick="addUnassignedExpense()">Ajouter à la liste</button>
+        </div>
+      </div>
+      <div id="unassigned-list"></div>
+    </div>
+
+    <div class="tab-panel" id="panel-expense" style="display:none;">
+      <h2 class="section">Nouvelle dépense</h2>
+      <div class="card-form">
+        <div class="row">
+          <div class="field">
+            <label>Enveloppe</label>
+            <select id="exp-envelope"></select>
+          </div>
+          <div class="field">
+            <label>Description</label>
+            <input id="exp-name" type="text" placeholder="Courses, essence...">
+          </div>
+          <div class="field">
+            <label>Montant (MAD)</label>
+            <input id="exp-amount" type="number" min="0" step="0.01" placeholder="150">
+          </div>
+          <div class="field">
+            <label>Date</label>
+            <input id="exp-date" type="date">
+          </div>
+          <div class="field" style="max-width:200px;">
+            <label>&nbsp;</label>
+            <div class="check-row">
+              <input type="checkbox" id="exp-date-unknown" onchange="toggleDateUnknown('exp')">
+              <label for="exp-date-unknown" style="text-transform:none;letter-spacing:0;">Je ne sais pas</label>
+            </div>
+          </div>
+        </div>
+        <div class="row" style="margin-top:10px;">
+          <div class="field" style="max-width:220px;">
+            <label>Type</label>
+            <div class="toggle-row">
+              <button type="button" class="type-btn besoin active" id="btn-besoin" onclick="setType('besoin')">Besoin</button>
+              <button type="button" class="type-btn envie" id="btn-envie" onclick="setType('envie')">Envie</button>
+            </div>
+          </div>
+          <div class="field" id="exp-justification-field">
+            <label>Justification (pourquoi ce besoin ?)</label>
+            <input id="exp-justification" type="text" placeholder="Ex: facture santé, loyer...">
+          </div>
+          <div class="field" style="max-width:260px;">
+            <label>&nbsp;</label>
+            <div class="check-row">
+              <input type="checkbox" id="exp-template">
+              <label for="exp-template" style="text-transform:none;letter-spacing:0;">Enregistrer comme modèle (ne décompte pas)</label>
+            </div>
+          </div>
+          <button class="primary" id="exp-submit-btn" onclick="saveExpense()">Ajouter la dépense</button>
+          <button class="ghost" id="exp-cancel-btn" style="display:none;" onclick="cancelExpenseEdit()">Annuler</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="panel-history" style="display:none;">
+      <h2 class="section">Historique des dépenses</h2>
+      <div class="history-filters">
+        <select class="filter" id="filter-envelope" onchange="renderHistory()"></select>
+        <select class="filter" id="filter-type" onchange="renderHistory()">
+          <option value="all">Tous types</option>
+          <option value="besoin">Besoin</option>
+          <option value="envie">Envie</option>
+        </select>
+      </div>
+      <div id="history-container"></div>
+    </div>
+
+    <div class="tab-panel" id="panel-apercu" style="display:none;">
+      <h2 class="section">Aperçu <span class="hint">besoin vs envie sur le mois sélectionné</span></h2>
+      <div class="card-form" style="display:flex;gap:24px;flex-wrap:wrap;align-items:center;">
+        <div id="apercu-chart" class="apercu-chart"></div>
+        <div id="apercu-legend" class="apercu-legend"></div>
+      </div>
+
+      <h2 class="section">Dépensé par enveloppe <span class="hint">sur la période sélectionnée</span></h2>
+      <div id="apercu-envelopes"></div>
+    </div>
+
+    <div class="tab-panel" id="panel-templates" style="display:none;">
+      <h2 class="section">Tous les modèles de dépenses <span class="hint">toutes enveloppes confondues</span></h2>
+      <div id="all-expense-templates"></div>
+
+      <h2 class="section">Tous les modèles de transfert</h2>
+      <div id="all-transfer-templates"></div>
+    </div>
+
+    <div class="tab-panel" id="panel-calendar" style="display:none;">
+      <h2 class="section">Charges par mois <span class="hint">chaque charge créée ici est une vraie enveloppe : transferts et modèles fonctionnent normalement</span></h2>
+      <div class="card-form" style="display:flex;align-items:center;gap:10px;">
+        <button class="ghost" onclick="changeCalendarYear(-1)">◀</button>
+        <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:18px;min-width:70px;text-align:center;" id="calendar-year-label"></div>
+        <button class="ghost" onclick="changeCalendarYear(1)">▶</button>
+      </div>
+      <div id="calendar-months"></div>
+    </div>
+
+    <div class="tab-panel" id="panel-savings" style="display:none;">
+      <h2 class="section">Objectifs d'épargne <span class="hint">fixe un objectif par mois, relié à ton enveloppe d'épargne</span></h2>
+      <div class="card-form">
+        <div class="row">
+          <div class="field">
+            <label>Enveloppe d'épargne</label>
+            <select id="savings-envelope" onchange="setSavingsEnvelope()"></select>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-form" style="display:flex;align-items:center;gap:10px;">
+        <button class="ghost" onclick="changeSavingsYear(-1)">◀</button>
+        <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:18px;min-width:70px;text-align:center;" id="savings-year-label"></div>
+        <button class="ghost" onclick="changeSavingsYear(1)">▶</button>
+      </div>
+
+      <div id="savings-summary"></div>
+      <div id="savings-months"></div>
+    </div>
+
+    <div class="tab-panel" id="panel-verif" style="display:none;">
+      <h2 class="section">Vérification <span class="hint">compare ce que tu as vraiment avec le calcul de l'appli</span></h2>
+      <div class="card-form">
+        <div class="row">
+          <div class="field">
+            <label>Montant réel en main (liquide)</label>
+            <input id="verif-amount" type="number" min="0" step="0.01" placeholder="Ex: 1250">
+          </div>
+          <div class="field">
+            <label>Date</label>
+            <input id="verif-date" type="date">
+          </div>
+          <div class="field" style="min-width:220px;">
+            <label>Note (optionnel)</label>
+            <input id="verif-note" type="text" placeholder="Ex: prêté à Karim, dépense oubliée...">
+          </div>
+          <button class="primary" onclick="addCheck()">Enregistrer le pointage</button>
+        </div>
+      </div>
+
+      <div class="summary" style="margin-bottom:22px;">
+        <div class="stat reste"><label>Reste théorique (appli)</label><div class="val" id="verif-theorique">0 MAD</div></div>
+        <div class="stat revenu"><label>Dernier montant déclaré</label><div class="val" id="verif-declare">—</div></div>
+        <div class="stat depense" id="verif-ecart-card"><label id="verif-ecart-label">Écart</label><div class="val" id="verif-ecart">—</div></div>
+      </div>
+
+      <h2 class="section">Historique des pointages</h2>
+      <div id="verif-history"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+let data = { envelopes: [], expenses: [] };
+let currentType = 'besoin';
+let currentUnassignedType = 'besoin';
+let historyDateSort = 'desc';
+let historyDailyTotals = false;
+let calendarYear = new Date().getFullYear();
+let savingsYear = new Date().getFullYear();
+let editingEnvelopeId = null;
+let editingExpenseId = null;
+let STORAGE_KEY = 'budget-data';
+const SESSIONS_META_KEY = 'budget-sessions-meta';
+let sessionsMeta = { sessions: [{id:'default', name:'Session 1', key:'budget-data'}], currentId:'default' };
+
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+
+function customConfirm(message, onConfirm){
+  const overlay = document.getElementById('custom-confirm-overlay');
+  const msgEl = document.getElementById('custom-confirm-message');
+  const okBtn = document.getElementById('custom-confirm-ok');
+  const cancelBtn = document.getElementById('custom-confirm-cancel');
+  msgEl.textContent = message;
+  cancelBtn.style.display = 'inline-block';
+  okBtn.textContent = 'Confirmer';
+  overlay.style.display = 'flex';
+  const cleanup = () => {
+    overlay.style.display = 'none';
+    okBtn.onclick = null;
+    cancelBtn.onclick = null;
+  };
+  okBtn.onclick = () => { cleanup(); onConfirm(); };
+  cancelBtn.onclick = () => { cleanup(); };
+}
+
+function customAlert(message){
+  const overlay = document.getElementById('custom-confirm-overlay');
+  const msgEl = document.getElementById('custom-confirm-message');
+  const okBtn = document.getElementById('custom-confirm-ok');
+  const cancelBtn = document.getElementById('custom-confirm-cancel');
+  msgEl.textContent = message;
+  cancelBtn.style.display = 'none';
+  okBtn.textContent = 'OK';
+  overlay.style.display = 'flex';
+  const cleanup = () => {
+    overlay.style.display = 'none';
+    okBtn.onclick = null;
+    cancelBtn.style.display = 'inline-block';
+  };
+  okBtn.onclick = () => { cleanup(); };
+}
+let currentCurrency = 'MAD';
+let exchangeRate = 60; // 1 MAD ≈ 60 FCFA (approximatif, modifiable)
+function fmt(n){
+  if(currentCurrency === 'FCFA'){
+    const converted = Math.round(n * exchangeRate);
+    return converted.toLocaleString('fr-FR') + ' FCFA';
+  }
+  return (Math.round(n*100)/100).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' MAD';
+}
+function todayStr(){ const d=new Date(); return d.toISOString().slice(0,10); }
+
+const hasCloudStorage = (typeof window.storage !== 'undefined' && window.storage !== null);
+
+async function storageGetRaw(key){
+  try{
+    if(hasCloudStorage){
+      const res = await window.storage.get(key, false);
+      return res ? res.value : null;
+    } else {
+      return localStorage.getItem(key);
+    }
+  }catch(e){ return null; }
+}
+
+async function storageSetRaw(key, value){
+  try{
+    if(hasCloudStorage){
+      await window.storage.set(key, value, false);
+    } else {
+      localStorage.setItem(key, value);
+    }
+  }catch(e){ console.error('Erreur de sauvegarde', e); }
+}
+
+async function loadSessionsMeta(){
+  const raw = await storageGetRaw(SESSIONS_META_KEY);
+  if(raw){
+    try{
+      const parsed = JSON.parse(raw);
+      if(parsed && Array.isArray(parsed.sessions) && parsed.sessions.length > 0){ sessionsMeta = parsed; }
+    }catch(e){ /* garde la valeur par défaut */ }
+  } else {
+    await storageSetRaw(SESSIONS_META_KEY, JSON.stringify(sessionsMeta));
+  }
+  const current = sessionsMeta.sessions.find(s=>s.id===sessionsMeta.currentId) || sessionsMeta.sessions[0];
+  STORAGE_KEY = current.key;
+}
+
+function defaultDataObject(){
+  return {
+    envelopes: [], expenses: [], checks: [], transfers: [], topups: [],
+    savingsGoals: [], savingsEnvelopeId: null, currency: currentCurrency, exchangeRate: exchangeRate
+  };
+}
+
+function applyDataFallbacks(){
+  if(!data.checks) data.checks = [];
+  if(!data.transfers) data.transfers = [];
+  if(!data.topups) data.topups = [];
+  if(!data.savingsGoals) data.savingsGoals = [];
+  if(data.savingsEnvelopeId === undefined) data.savingsEnvelopeId = null;
+  if(!data.currency) data.currency = 'MAD';
+  if(!data.exchangeRate) data.exchangeRate = 60;
+  currentCurrency = data.currency;
+  exchangeRate = data.exchangeRate;
+}
+
+async function load(){
+  try{
+    await loadSessionsMeta();
+  }catch(e){ console.error('Erreur sessions', e); }
+  try{
+    const raw = await storageGetRaw(STORAGE_KEY);
+    if(raw){ data = JSON.parse(raw); }
+  }catch(e){ /* premiere utilisation, pas encore de donnees */ }
+  applyDataFallbacks();
+  const rateInput = document.getElementById('rate-input');
+  if(rateInput) rateInput.value = exchangeRate;
+  updateCurrencyButton();
+  try{ renderSessionSelect(); }catch(e){ console.error('Erreur session select', e); }
+  let generated = false;
+  try{ generated = regenerateRecurringEnvelopes(); }catch(e){ console.error('Erreur régénération', e); }
+  lastSnapshot = JSON.stringify(data);
+  document.getElementById('exp-date').value = todayStr();
+  document.getElementById('verif-date').value = todayStr();
+  document.getElementById('env-date').value = todayStr();
+  document.getElementById('transfer-date').value = todayStr();
+  document.getElementById('u-date').value = todayStr();
+  document.getElementById('topup-date').value = todayStr();
+  const modeLabel = document.getElementById('storage-mode');
+  modeLabel.textContent = hasCloudStorage ? 'Sauvegarde: compte Claude' : 'Sauvegarde: ce navigateur (pense à exporter)';
+  if(generated) save();
+  renderAll();
+}
+
+function regenerateRecurringEnvelopes(){
+  const currentMonth = todayStr().slice(0,7);
+  const groups = {};
+  data.envelopes.filter(e=>e.recurring && e.recurringId).forEach(e=>{
+    if(!groups[e.recurringId] || e.month > groups[e.recurringId].month) groups[e.recurringId] = e;
+  });
+  let created = false;
+  Object.values(groups).forEach(latest=>{
+    if(latest.month < currentMonth){
+      data.envelopes.push({
+        id: uid(), name: latest.name, amount: latest.amount, createdAt: new Date().toISOString(),
+        date: todayStr(), dateUnknown: false,
+        recurring: true, recurringId: latest.recurringId, month: currentMonth
+      });
+      created = true;
+    }
+  });
+  return created;
+}
+
+let undoStack = [];
+let lastSnapshot = null;
+
+function renderSessionSelect(){
+  const sel = document.getElementById('session-select');
+  if(!sel) return;
+  sel.innerHTML = sessionsMeta.sessions.map(s=>`<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('');
+  sel.value = sessionsMeta.currentId;
+}
+
+function toggleNewSessionForm(){
+  const form = document.getElementById('new-session-form');
+  form.style.display = form.style.display === 'none' ? 'flex' : 'none';
+}
+
+async function confirmCreateSession(){
+  const nameInput = document.getElementById('new-session-name');
+  const name = nameInput.value.trim();
+  if(!name){ customAlert('Merci de donner un nom à la session.'); return; }
+  await persist();
+  const id = uid();
+  const key = 'budget-data-' + id;
+  sessionsMeta.sessions.push({ id, name, key });
+  sessionsMeta.currentId = id;
+  await storageSetRaw(SESSIONS_META_KEY, JSON.stringify(sessionsMeta));
+  STORAGE_KEY = key;
+  data = defaultDataObject();
+  applyDataFallbacks();
+  await storageSetRaw(STORAGE_KEY, JSON.stringify(data));
+  lastSnapshot = JSON.stringify(data);
+  undoStack = [];
+  updateUndoButton();
+  updateCurrencyButton();
+  nameInput.value = '';
+  document.getElementById('new-session-form').style.display = 'none';
+  renderSessionSelect();
+  renderAll();
+}
+
+async function switchSession(id){
+  if(id === sessionsMeta.currentId) return;
+  await persist();
+  sessionsMeta.currentId = id;
+  await storageSetRaw(SESSIONS_META_KEY, JSON.stringify(sessionsMeta));
+  const session = sessionsMeta.sessions.find(s=>s.id===id);
+  STORAGE_KEY = session.key;
+  data = defaultDataObject();
+  try{
+    const raw = await storageGetRaw(STORAGE_KEY);
+    if(raw){ data = JSON.parse(raw); }
+  }catch(e){ /* nouvelle session vide */ }
+  applyDataFallbacks();
+  lastSnapshot = JSON.stringify(data);
+  undoStack = [];
+  updateUndoButton();
+  updateCurrencyButton();
+  renderSessionSelect();
+  renderAll();
+}
+
+function deleteCurrentSession(){
+  if(sessionsMeta.sessions.length <= 1){ customAlert('Impossible de supprimer la dernière session restante.'); return; }
+  const current = sessionsMeta.sessions.find(s=>s.id===sessionsMeta.currentId);
+  customConfirm(`Supprimer la session "${current.name}" et toutes ses données ? Cette action est irréversible.`, async () => {
+    sessionsMeta.sessions = sessionsMeta.sessions.filter(s=>s.id!==current.id);
+    sessionsMeta.currentId = sessionsMeta.sessions[0].id;
+    await storageSetRaw(SESSIONS_META_KEY, JSON.stringify(sessionsMeta));
+    STORAGE_KEY = sessionsMeta.sessions[0].key;
+    data = defaultDataObject();
+    try{
+      const raw = await storageGetRaw(STORAGE_KEY);
+      if(raw){ data = JSON.parse(raw); }
+    }catch(e){}
+    applyDataFallbacks();
+    lastSnapshot = JSON.stringify(data);
+    undoStack = [];
+    updateUndoButton();
+    updateCurrencyButton();
+    renderSessionSelect();
+    renderAll();
+  });
+}
+
+function toggleCurrency(){
+  currentCurrency = currentCurrency === 'MAD' ? 'FCFA' : 'MAD';
+  data.currency = currentCurrency;
+  updateCurrencyButton();
+  save(); renderAll();
+}
+
+function updateCurrencyButton(){
+  const btn = document.getElementById('currency-toggle');
+  const rateEditor = document.getElementById('rate-editor');
+  if(!btn) return;
+  btn.textContent = currentCurrency === 'MAD' ? 'MAD → FCFA' : 'FCFA → MAD';
+  if(rateEditor) rateEditor.style.display = currentCurrency === 'FCFA' ? 'flex' : 'none';
+}
+
+function updateExchangeRate(){
+  const input = document.getElementById('rate-input');
+  const val = parseFloat(input.value);
+  if(isNaN(val) || val <= 0){ input.value = exchangeRate; return; }
+  exchangeRate = val;
+  data.exchangeRate = val;
+  save(); renderAll();
+}
+
+async function persist(){
+  await storageSetRaw(STORAGE_KEY, JSON.stringify(data));
+}
+
+async function save(){
+  const currentJson = JSON.stringify(data);
+  if(lastSnapshot !== null && lastSnapshot !== currentJson){
+    undoStack.push(lastSnapshot);
+    if(undoStack.length > 25) undoStack.shift();
+  }
+  await persist();
+  lastSnapshot = currentJson;
+  updateUndoButton();
+}
+
+async function undoLast(){
+  if(undoStack.length === 0) return;
+  const prev = undoStack.pop();
+  data = JSON.parse(prev);
+  await persist();
+  lastSnapshot = JSON.stringify(data);
+  updateUndoButton();
+  renderAll();
+}
+
+function updateUndoButton(){
+  const btn = document.getElementById('undo-btn');
+  if(!btn) return;
+  btn.disabled = undoStack.length === 0;
+  btn.textContent = undoStack.length > 0 ? `↩ Annuler (${undoStack.length})` : '↩ Annuler';
+}
+
+function exportData(){
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'budget-enveloppes-' + todayStr() + '.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function loadExampleData(){
+  customConfirm('Remplacer les données actuelles par un exemple de démonstration ?', () => {
+    const today = todayStr();
+    const envSalaire = uid(), envExtra = uid();
+    data = {
+      envelopes: [
+        { id: envSalaire, name: 'Salaire', amount: 5000, cap:null, createdAt: new Date().toISOString(), date: today, dateUnknown:false, recurring:false, recurringId:null, month:null },
+        { id: envExtra, name: 'Extra', amount: 800, cap:null, createdAt: new Date().toISOString(), date: today, dateUnknown:false, recurring:false, recurringId:null, month:null }
+      ],
+      expenses: [
+        { id: uid(), envelopeId: envSalaire, name: 'Courses', amount: 350, type:'besoin', date: today, dateUnknown:false, isTemplate:false, createdAt: new Date().toISOString() },
+        { id: uid(), envelopeId: envSalaire, name: 'Ciné', amount: 120, type:'envie', date: today, dateUnknown:false, isTemplate:false, createdAt: new Date().toISOString() },
+        { id: uid(), envelopeId: envSalaire, name: 'Loyer', amount: 1500, type:'besoin', date: today, dateUnknown:false, isTemplate:true, createdAt: new Date().toISOString() },
+        { id: uid(), envelopeId: envSalaire, name: 'Netflix', amount: 100, type:'envie', date: today, dateUnknown:false, isTemplate:true, createdAt: new Date().toISOString() }
+      ],
+      checks: [
+        { id: uid(), date: today, reel: 3000, theorique: 5000-350-120, ecart: 3000-(5000-350-120), note: 'exemple de pointage', createdAt: new Date().toISOString() }
+      ],
+      transfers: [
+        { id: uid(), fromId: envSalaire, toId: envExtra, fromName:'Salaire', toName:'Extra', amount: 200, date: today, isTemplate:false, createdAt: new Date().toISOString() },
+        { id: uid(), fromId: envSalaire, toId: envExtra, fromName:'Salaire', toName:'Extra', amount: 300, date: today, isTemplate:true, createdAt: new Date().toISOString() }
+      ],
+      topups: [
+        { id: uid(), envelopeId: envExtra, envelopeName:'Extra', amount: 150, justification:'Cadeau anniversaire', date: today, createdAt: new Date().toISOString() }
+      ]
+    };
+    save(); renderAll();
+  });
+}
+
+function resetAllData(){
+  customConfirm('Tout effacer ? Enveloppes, dépenses, modèles, transferts et pointages seront définitivement supprimés.', () => {
+    customConfirm('Dernière confirmation : cette action est irréversible. Continuer ?', () => {
+      data = { envelopes: [], expenses: [], checks: [], transfers: [], topups: [], savingsGoals: [], savingsEnvelopeId: null, currency: currentCurrency, exchangeRate: exchangeRate };
+      save(); renderAll();
+    });
+  });
+}
+
+function importData(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      const parsed = JSON.parse(e.target.result);
+      if(!parsed.envelopes || !parsed.expenses){ customAlert('Fichier invalide.'); return; }
+      customConfirm('Remplacer les données actuelles par ce fichier importé ?', () => {
+        data = parsed;
+        if(!data.checks) data.checks = [];
+        if(!data.transfers) data.transfers = [];
+        if(!data.topups) data.topups = [];
+        if(!data.savingsGoals) data.savingsGoals = [];
+        if(data.savingsEnvelopeId === undefined) data.savingsEnvelopeId = null;
+        if(!data.currency) data.currency = 'MAD';
+        if(!data.exchangeRate) data.exchangeRate = 60;
+        currentCurrency = data.currency;
+        exchangeRate = data.exchangeRate;
+        const rateInput = document.getElementById('rate-input');
+        if(rateInput) rateInput.value = exchangeRate;
+        updateCurrencyButton();
+        save(); renderAll();
+      });
+    }catch(err){ customAlert('Impossible de lire ce fichier.'); }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+function showTab(name){
+  ['envelopes','unassigned','expense','history','apercu','templates','calendar','savings','verif'].forEach(t=>{
+    document.getElementById('panel-'+t).style.display = (t===name) ? '' : 'none';
+    document.getElementById('tab-btn-'+t).classList.toggle('active', t===name);
+  });
+}
+
+function toggleDateUnknown(prefix){
+  const cb = document.getElementById(prefix+'-date-unknown');
+  const dateInput = document.getElementById(prefix+'-date');
+  dateInput.disabled = cb.checked;
+  if(cb.checked){ dateInput.value=''; }
+  else if(!dateInput.value){ dateInput.value = todayStr(); }
+}
+
+function setType(t){
+  currentType = t;
+  document.getElementById('btn-besoin').classList.toggle('active', t==='besoin');
+  document.getElementById('btn-envie').classList.toggle('active', t==='envie');
+  document.getElementById('exp-justification-field').style.display = t==='besoin' ? '' : 'none';
+}
+
+function setUnassignedType(t){
+  currentUnassignedType = t;
+  document.getElementById('u-btn-besoin').classList.toggle('active', t==='besoin');
+  document.getElementById('u-btn-envie').classList.toggle('active', t==='envie');
+  document.getElementById('u-justification-field').style.display = t==='besoin' ? '' : 'none';
+}
+
+function addUnassignedExpense(){
+  const name = document.getElementById('u-name').value.trim();
+  const amount = parseFloat(document.getElementById('u-amount').value);
+  const dateUnknown = document.getElementById('u-date-unknown').checked;
+  const date = dateUnknown ? null : (document.getElementById('u-date').value || todayStr());
+  const justification = document.getElementById('u-justification').value.trim();
+  if(!name || isNaN(amount) || amount <= 0){ customAlert('Merci de donner une description et un montant valide.'); return; }
+  data.expenses.push({
+    id: uid(), envelopeId: null, name, amount, type: currentUnassignedType, date, dateUnknown,
+    justification, isTemplate: false, createdAt: new Date().toISOString()
+  });
+  document.getElementById('u-name').value = '';
+  document.getElementById('u-amount').value = '';
+  document.getElementById('u-date-unknown').checked = false;
+  document.getElementById('u-date').disabled = false;
+  document.getElementById('u-date').value = todayStr();
+  document.getElementById('u-justification').value = '';
+  setUnassignedType('besoin');
+  save(); renderAll();
+}
+
+function assignExpense(id){
+  const sel = document.getElementById('assign-'+id);
+  if(!sel || !sel.value){ customAlert('Choisis une enveloppe.'); return; }
+  const exp = data.expenses.find(e=>e.id===id);
+  if(!exp) return;
+  exp.envelopeId = sel.value;
+  save(); renderAll();
+}
+
+function renderUnassigned(){
+  const container = document.getElementById('unassigned-list');
+  const list = data.expenses.filter(e=>!e.isTemplate && !e.envelopeId)
+    .slice().sort((a,b)=> ((b.date||'')+b.createdAt).localeCompare((a.date||'')+a.createdAt));
+  if(list.length===0){
+    container.innerHTML = '<div class="empty-note">Aucune dépense à classer. Ajoute-en une ci-dessus, ou tout est déjà associé 👍</div>';
+    return;
+  }
+  const envOptions = '<option value="">Choisir une enveloppe...</option>' + data.envelopes.map(e=>`<option value="${e.id}">${escapeHtml(envelopeDisplayName(e))}</option>`).join('');
+  container.innerHTML = list.map(e=>`
+    <div class="tpl-item" style="flex-wrap:wrap;">
+      <span class="tpl-name"><span class="tpl-tag ${e.type}"></span>${escapeHtml(e.name)} <span style="color:var(--ink-soft);">— ${e.dateUnknown || !e.date ? 'date inconnue' : e.date}</span>${e.justification ? `<br><span style="font-size:11px;color:var(--ink-soft);font-style:italic;">📝 ${escapeHtml(e.justification)}</span>` : ''}</span>
+      <span class="tpl-amt">${fmt(e.amount)}</span>
+      <select class="filter" id="assign-${e.id}" style="max-width:160px;">${envOptions}</select>
+      <button class="ghost" onclick="assignExpense('${e.id}')">Associer</button>
+      <button class="del-btn" title="Supprimer" onclick="deleteExpense('${e.id}')">✕</button>
+    </div>`).join('');
+}
+
+function saveEnvelope(){
+  const name = document.getElementById('env-name').value.trim();
+  const amountRaw = document.getElementById('env-amount').value;
+  const amount = amountRaw === '' ? 0 : parseFloat(amountRaw);
+  const goalRaw = document.getElementById('env-goal').value;
+  const plannedAmount = goalRaw === '' ? null : parseFloat(goalRaw);
+  const recurring = document.getElementById('env-recurring').checked;
+  const dateUnknown = document.getElementById('env-date-unknown').checked;
+  const date = dateUnknown ? null : (document.getElementById('env-date').value || todayStr());
+  const editingEnv = editingEnvelopeId ? data.envelopes.find(e=>e.id===editingEnvelopeId) : null;
+  const isChargeBeingEdited = !!(editingEnv && editingEnv.chargeYear);
+  if(!name || isNaN(amount) || amount < 0 || (!isChargeBeingEdited && amount <= 0)){
+    customAlert(isChargeBeingEdited ? 'Merci de donner un nom valide.' : 'Merci de donner un nom et un montant valide.');
+    return;
+  }
+  if(plannedAmount !== null && (isNaN(plannedAmount) || plannedAmount < 0)){ customAlert("L'objectif doit être un nombre valide (ou laisse-le vide)."); return; }
+  if(editingEnvelopeId){
+    const env = editingEnv;
+    if(env){
+      env.name = name; env.amount = amount; env.date = date; env.dateUnknown = dateUnknown;
+      if(isChargeBeingEdited) env.plannedAmount = plannedAmount;
+    }
+    cancelEnvelopeEdit();
+  } else {
+    data.envelopes.push({
+      id: uid(), name, amount, createdAt: new Date().toISOString(), date, dateUnknown,
+      recurring, recurringId: recurring ? uid() : null, month: recurring ? todayStr().slice(0,7) : null
+    });
+  }
+  document.getElementById('env-name').value='';
+  document.getElementById('env-amount').value='';
+  document.getElementById('env-goal').value='';
+  document.getElementById('env-recurring').checked=false;
+  document.getElementById('env-date-unknown').checked=false;
+  document.getElementById('env-date').disabled=false;
+  document.getElementById('env-date').value = todayStr();
+  save(); renderAll();
+}
+
+function editEnvelope(id){
+  const env = data.envelopes.find(e=>e.id===id);
+  if(!env) return;
+  showTab('envelopes');
+  editingEnvelopeId = id;
+  document.getElementById('env-name').value = env.name;
+  document.getElementById('env-amount').value = env.amount;
+  document.getElementById('env-goal').value = (env.plannedAmount !== null && env.plannedAmount !== undefined) ? env.plannedAmount : '';
+  document.getElementById('env-date-unknown').checked = !!env.dateUnknown;
+  document.getElementById('env-date').disabled = !!env.dateUnknown;
+  document.getElementById('env-date').value = env.date || '';
+  document.getElementById('env-recurring').checked = false;
+  document.getElementById('env-recurring').disabled = true;
+  document.getElementById('env-submit-btn').textContent = 'Enregistrer les modifications';
+  document.getElementById('env-cancel-btn').style.display = 'inline-block';
+  document.getElementById('env-name').scrollIntoView({behavior:'smooth', block:'center'});
+}
+
+function cancelEnvelopeEdit(){
+  editingEnvelopeId = null;
+  document.getElementById('env-name').value='';
+  document.getElementById('env-amount').value='';
+  document.getElementById('env-goal').value='';
+  document.getElementById('env-recurring').checked=false;
+  document.getElementById('env-recurring').disabled = false;
+  document.getElementById('env-date-unknown').checked=false;
+  document.getElementById('env-date').disabled=false;
+  document.getElementById('env-date').value = todayStr();
+  document.getElementById('env-submit-btn').textContent = "Ajouter l'enveloppe";
+  document.getElementById('env-cancel-btn').style.display = 'none';
+}
+
+function saveExpense(){
+  const envelopeId = document.getElementById('exp-envelope').value;
+  const name = document.getElementById('exp-name').value.trim();
+  const amount = parseFloat(document.getElementById('exp-amount').value);
+  const dateUnknown = document.getElementById('exp-date-unknown').checked;
+  const date = dateUnknown ? null : (document.getElementById('exp-date').value || todayStr());
+  const isTemplate = document.getElementById('exp-template').checked;
+  const justification = currentType==='besoin' ? document.getElementById('exp-justification').value.trim() : '';
+  if(!envelopeId){ customAlert('Crée d\'abord une enveloppe.'); return; }
+  if(!name || isNaN(amount) || amount <= 0){ customAlert('Merci de donner une description et un montant valide.'); return; }
+  if(editingExpenseId){
+    const exp = data.expenses.find(e=>e.id===editingExpenseId);
+    if(exp){
+      exp.envelopeId = envelopeId; exp.name = name; exp.amount = amount;
+      exp.date = date; exp.dateUnknown = dateUnknown; exp.type = currentType; exp.isTemplate = isTemplate;
+      exp.justification = justification;
+    }
+    cancelExpenseEdit();
+  } else {
+    data.expenses.push({ id: uid(), envelopeId, name, amount, type: currentType, date, dateUnknown, justification, isTemplate, createdAt: new Date().toISOString() });
+  }
+  document.getElementById('exp-name').value='';
+  document.getElementById('exp-amount').value='';
+  document.getElementById('exp-justification').value='';
+  document.getElementById('exp-template').checked=false;
+  document.getElementById('exp-date-unknown').checked=false;
+  document.getElementById('exp-date').disabled=false;
+  document.getElementById('exp-date').value = todayStr();
+  save(); renderAll();
+}
+
+function editExpense(id){
+  const exp = data.expenses.find(e=>e.id===id);
+  if(!exp) return;
+  showTab('expense');
+  editingExpenseId = id;
+  document.getElementById('exp-envelope').value = exp.envelopeId;
+  document.getElementById('exp-name').value = exp.name;
+  document.getElementById('exp-amount').value = exp.amount;
+  document.getElementById('exp-date-unknown').checked = !!exp.dateUnknown;
+  document.getElementById('exp-date').disabled = !!exp.dateUnknown;
+  document.getElementById('exp-date').value = exp.date || '';
+  document.getElementById('exp-template').checked = !!exp.isTemplate;
+  document.getElementById('exp-justification').value = exp.justification || '';
+  setType(exp.type);
+  document.getElementById('exp-submit-btn').textContent = 'Enregistrer les modifications';
+  document.getElementById('exp-cancel-btn').style.display = 'inline-block';
+  document.getElementById('exp-name').scrollIntoView({behavior:'smooth', block:'center'});
+}
+
+function cancelExpenseEdit(){
+  editingExpenseId = null;
+  document.getElementById('exp-name').value='';
+  document.getElementById('exp-amount').value='';
+  document.getElementById('exp-justification').value='';
+  document.getElementById('exp-template').checked=false;
+  document.getElementById('exp-date-unknown').checked=false;
+  document.getElementById('exp-date').disabled=false;
+  document.getElementById('exp-date').value = todayStr();
+  setType('besoin');
+  document.getElementById('exp-submit-btn').textContent = 'Ajouter la dépense';
+  document.getElementById('exp-cancel-btn').style.display = 'none';
+}
+
+function activateTemplate(tplId){
+  const tpl = data.expenses.find(e=>e.id===tplId);
+  if(!tpl) return;
+  data.expenses.push({ id: uid(), envelopeId: tpl.envelopeId, name: tpl.name, amount: tpl.amount, type: tpl.type, date: todayStr(), isTemplate:false, createdAt: new Date().toISOString() });
+  save(); renderAll();
+}
+
+function deleteExpense(id){
+  data.expenses = data.expenses.filter(e=>e.id!==id);
+  save(); renderAll();
+}
+
+function deleteEnvelope(id){
+  customConfirm('Supprimer cette enveloppe et toutes ses dépenses liées ?', () => {
+    data.envelopes = data.envelopes.filter(e=>e.id!==id);
+    data.expenses = data.expenses.filter(e=>e.envelopeId!==id);
+    save(); renderAll();
+  });
+}
+
+function archiveEnvelope(id){
+  const env = data.envelopes.find(e=>e.id===id);
+  if(!env) return;
+  env.archived = true;
+  save(); renderAll();
+}
+
+function unarchiveEnvelope(id){
+  const env = data.envelopes.find(e=>e.id===id);
+  if(!env) return;
+  env.archived = false;
+  save(); renderAll();
+}
+
+function toggleArchivedSection(){
+  document.getElementById('archived-envelopes').classList.toggle('open');
+  document.getElementById('archived-toggle').classList.toggle('open-arrow');
+}
+
+function renderArchivedEnvelopes(){
+  const container = document.getElementById('archived-envelopes');
+  const toggleBtn = document.getElementById('archived-toggle');
+  if(!container || !toggleBtn) return;
+  const archived = data.envelopes.filter(env=>env.archived && !env.chargeYear);
+  toggleBtn.textContent = `Enveloppes archivées (${archived.length}) ▾`;
+  if(archived.length===0){
+    container.innerHTML = '<div style="font-size:12px;color:var(--ink-soft);">Aucune enveloppe archivée.</div>';
+    return;
+  }
+  container.innerHTML = archived.map(env=>{
+    const spent = envelopeSpent(env.id);
+    const reste = env.amount - spent;
+    return `
+    <div class="tpl-item" style="flex-wrap:wrap;">
+      <span class="tpl-name">${escapeHtml(env.name)} <span style="color:var(--ink-soft);font-size:11px;">— reste ${fmt(reste)}</span></span>
+      <button class="ghost" onclick="unarchiveEnvelope('${env.id}')">Désarchiver</button>
+      <button class="del-btn" title="Supprimer définitivement" onclick="deleteEnvelope('${env.id}')">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function toggleTemplates(envId){
+  const el = document.getElementById('tpl-list-'+envId);
+  el.classList.toggle('open');
+}
+
+function toggleTransfers(envId){
+  const el = document.getElementById('transfers-list-'+envId);
+  el.classList.toggle('open');
+}
+
+let dragState = { id: null };
+
+function envDragStart(e, envId){
+  e.preventDefault();
+  dragState.id = envId;
+  const card = document.querySelector(`.envelope-card[data-env-id="${envId}"]`);
+  if(card) card.classList.add('dragging');
+  document.addEventListener('pointermove', envDragMove);
+  document.addEventListener('pointerup', envDragEnd);
+}
+
+function envDragMove(e){
+  if(!dragState.id) return;
+  const el = document.elementFromPoint(e.clientX, e.clientY);
+  if(!el) return;
+  const card = el.closest('.envelope-card');
+  if(!card) return;
+  const overId = card.dataset.envId;
+  if(!overId || overId===dragState.id) return;
+  const fromIdx = data.envelopes.findIndex(x=>x.id===dragState.id);
+  const toIdx = data.envelopes.findIndex(x=>x.id===overId);
+  if(fromIdx===-1 || toIdx===-1) return;
+
+  const firstRects = {};
+  document.querySelectorAll('.envelope-card').forEach(c=>{
+    firstRects[c.dataset.envId] = c.getBoundingClientRect();
+  });
+
+  const [moved] = data.envelopes.splice(fromIdx, 1);
+  data.envelopes.splice(toIdx, 0, moved);
+  renderEnvelopes();
+
+  const currentDragId = dragState.id;
+  requestAnimationFrame(()=>{
+    document.querySelectorAll('.envelope-card').forEach(c=>{
+      const first = firstRects[c.dataset.envId];
+      if(!first) return;
+      const last = c.getBoundingClientRect();
+      const dx = first.left - last.left;
+      const dy = first.top - last.top;
+      if(dx || dy){
+        c.style.transition = 'none';
+        c.style.transform = `translate(${dx}px, ${dy}px)`;
+        requestAnimationFrame(()=>{
+          c.style.transition = 'transform .2s ease';
+          c.style.transform = '';
+        });
+      }
+    });
+    const newCard = document.querySelector(`.envelope-card[data-env-id="${currentDragId}"]`);
+    if(newCard) newCard.classList.add('dragging');
+  });
+}
+
+function envDragEnd(){
+  document.removeEventListener('pointermove', envDragMove);
+  document.removeEventListener('pointerup', envDragEnd);
+  dragState.id = null;
+  save();
+  renderEnvelopes();
+}
+
+function envelopeSpent(envId){
+  return data.expenses.filter(e=>e.envelopeId===envId && !e.isTemplate).reduce((s,e)=>s+e.amount,0);
+}
+
+function renderSelects(){
+  const expSel = document.getElementById('exp-envelope');
+  const filtSel = document.getElementById('filter-envelope');
+  const fromSel = document.getElementById('transfer-from');
+  const toSel = document.getElementById('transfer-to');
+  const topupSel = document.getElementById('topup-envelope');
+  const prevExp = expSel.value, prevFilt = filtSel.value;
+  const prevFrom = fromSel.value, prevTo = toSel.value;
+  const prevTopup = topupSel.value;
+  const activeEnvelopes = data.envelopes.filter(e=>!e.archived);
+  expSel.innerHTML = activeEnvelopes.map(e=>`<option value="${e.id}">${escapeHtml(envelopeDisplayName(e))}</option>`).join('') || '<option value="">— aucune enveloppe —</option>';
+  filtSel.innerHTML = '<option value="all">Toutes enveloppes</option>' + data.envelopes.map(e=>`<option value="${e.id}">${escapeHtml(envelopeDisplayName(e))}</option>`).join('');
+  const envOptions = activeEnvelopes.map(e=>`<option value="${e.id}">${escapeHtml(envelopeDisplayName(e))}</option>`).join('') || '<option value="">— aucune enveloppe —</option>';
+  fromSel.innerHTML = envOptions;
+  toSel.innerHTML = envOptions;
+  topupSel.innerHTML = envOptions;
+  if(activeEnvelopes.some(e=>e.id===prevExp)) expSel.value = prevExp;
+  if(prevFilt) filtSel.value = prevFilt;
+  if(activeEnvelopes.some(e=>e.id===prevFrom)) fromSel.value = prevFrom;
+  if(activeEnvelopes.some(e=>e.id===prevTo)) toSel.value = prevTo;
+  if(activeEnvelopes.some(e=>e.id===prevTopup)) topupSel.value = prevTopup;
+}
+
+function escapeHtml(s){ return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function envelopeDisplayName(e){
+  if(e.chargeYear && e.chargeMonth){
+    return e.name + ' (' + CAL_MONTH_NAMES[e.chargeMonth-1].slice(0,3) + ' ' + e.chargeYear + ')';
+  }
+  if(e.recurring && e.month){
+    return e.name + ' (' + monthLabel(e.month) + ')';
+  }
+  return e.name;
+}
+
+function addTopup(){
+  const envelopeId = document.getElementById('topup-envelope').value;
+  const amount = parseFloat(document.getElementById('topup-amount').value);
+  const date = document.getElementById('topup-date').value || todayStr();
+  const justification = document.getElementById('topup-justification').value.trim();
+  if(!envelopeId){ customAlert('Crée d\'abord une enveloppe.'); return; }
+  if(isNaN(amount) || amount <= 0){ customAlert('Merci de saisir un montant valide.'); return; }
+  const env = data.envelopes.find(e=>e.id===envelopeId);
+  if(!env) return;
+  env.amount += amount;
+  if(!data.topups) data.topups = [];
+  data.topups.push({ id: uid(), envelopeId, envelopeName: env.name, amount, justification, date, createdAt: new Date().toISOString() });
+  document.getElementById('topup-amount').value = '';
+  document.getElementById('topup-justification').value = '';
+  save(); renderAll();
+}
+
+function deleteTopup(id){
+  const t = data.topups.find(x=>x.id===id);
+  if(!t) return;
+  customConfirm("Annuler cet apport ? Le montant sera retiré de l'enveloppe.", () => {
+    const env = data.envelopes.find(e=>e.id===t.envelopeId);
+    if(env) env.amount -= t.amount;
+    data.topups = data.topups.filter(x=>x.id!==id);
+    save(); renderAll();
+  });
+}
+
+function renderTopupHistory(){
+  const container = document.getElementById('topup-history');
+  if(!container) return;
+  const topups = (data.topups || []).slice().sort((a,b)=> (b.date+b.createdAt).localeCompare(a.date+a.createdAt));
+  if(topups.length===0){
+    container.innerHTML = '<div class="empty-note">Aucun apport effectué.</div>';
+    return;
+  }
+  container.innerHTML = topups.map(t=>`
+    <div class="tpl-item" style="flex-wrap:wrap;">
+      <span class="tpl-name" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${t.date} — ${escapeHtml(t.envelopeName)}${t.justification ? `<br><span style="font-size:11px;color:var(--ink-soft);font-style:italic;">📝 ${escapeHtml(t.justification)}</span>` : ''}</span>
+      <span class="tpl-amt" style="color:${t.amount<0?'var(--pink)':'var(--green)'};">${t.amount>=0?'+':''}${fmt(t.amount)}</span>
+      <button class="del-btn" title="Annuler" onclick="deleteTopup('${t.id}')">✕</button>
+    </div>`).join('');
+}
+
+function addTransfer(){
+  const fromId = document.getElementById('transfer-from').value;
+  const toId = document.getElementById('transfer-to').value;
+  const amount = parseFloat(document.getElementById('transfer-amount').value);
+  const date = document.getElementById('transfer-date').value || todayStr();
+  const isTemplate = document.getElementById('transfer-template').checked;
+  if(!fromId || !toId){ customAlert('Il faut au moins deux enveloppes pour transférer.'); return; }
+  if(fromId===toId){ customAlert('Choisis deux enveloppes différentes.'); return; }
+  if(isNaN(amount) || amount <= 0){ customAlert('Merci de saisir un montant valide.'); return; }
+  const fromEnv = data.envelopes.find(e=>e.id===fromId);
+  const toEnv = data.envelopes.find(e=>e.id===toId);
+  if(!fromEnv || !toEnv) return;
+  if(!isTemplate){
+    fromEnv.amount -= amount;
+    toEnv.amount += amount;
+  }
+  if(!data.transfers) data.transfers = [];
+  data.transfers.push({
+    id: uid(), fromId, toId, fromName: fromEnv.name, toName: toEnv.name, amount, date, isTemplate, createdAt: new Date().toISOString()
+  });
+  document.getElementById('transfer-amount').value = '';
+  document.getElementById('transfer-template').checked = false;
+  save(); renderAll();
+}
+
+function activateTransferTemplate(id){
+  const tpl = data.transfers.find(t=>t.id===id);
+  if(!tpl) return;
+  const fromEnv = data.envelopes.find(e=>e.id===tpl.fromId);
+  const toEnv = data.envelopes.find(e=>e.id===tpl.toId);
+  if(!fromEnv || !toEnv){ customAlert('Une des enveloppes de ce modèle n\'existe plus.'); return; }
+  fromEnv.amount -= tpl.amount;
+  toEnv.amount += tpl.amount;
+  data.transfers.push({
+    id: uid(), fromId: tpl.fromId, toId: tpl.toId, fromName: fromEnv.name, toName: toEnv.name,
+    amount: tpl.amount, date: todayStr(), isTemplate: false, createdAt: new Date().toISOString()
+  });
+  save(); renderAll();
+}
+
+function deleteTransfer(id){
+  const t = data.transfers.find(x=>x.id===id);
+  if(!t) return;
+  if(t.isTemplate){
+    data.transfers = data.transfers.filter(x=>x.id!==id);
+    save(); renderAll();
+    return;
+  }
+  customConfirm('Annuler ce transfert ? Les montants seront remis comme avant.', () => {
+    const fromEnv = data.envelopes.find(e=>e.id===t.fromId);
+    const toEnv = data.envelopes.find(e=>e.id===t.toId);
+    if(fromEnv) fromEnv.amount += t.amount;
+    if(toEnv) toEnv.amount -= t.amount;
+    data.transfers = data.transfers.filter(x=>x.id!==id);
+    save(); renderAll();
+  });
+}
+
+function renderTransferHistory(){
+  const container = document.getElementById('transfer-history');
+  const templatesContainer = document.getElementById('transfer-templates');
+  const all = data.transfers || [];
+
+  const templates = all.filter(t=>t.isTemplate).slice().sort((a,b)=> (b.date+b.createdAt).localeCompare(a.date+a.createdAt));
+  templatesContainer.innerHTML = templates.length ? templates.map(t=>{
+    const fromEnv = data.envelopes.find(e=>e.id===t.fromId);
+    const toEnv = data.envelopes.find(e=>e.id===t.toId);
+    const fromReste = fromEnv ? fromEnv.amount - envelopeSpent(fromEnv.id) : null;
+    const toReste = toEnv ? toEnv.amount - envelopeSpent(toEnv.id) : null;
+    const projLabel = (fromReste!==null && toReste!==null)
+      ? `<span style="color:var(--ink-soft);font-size:11px;"> — ${escapeHtml(t.fromName)} resterait ${fmt(fromReste - t.amount)}, ${escapeHtml(t.toName)} resterait ${fmt(toReste + t.amount)}</span>` : '';
+    return `
+    <div class="tpl-item" style="flex-wrap:wrap;">
+      <span class="tpl-name" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(t.fromName)} → ${escapeHtml(t.toName)}${projLabel}</span>
+      <span class="tpl-amt" style="white-space:nowrap;">${fmt(t.amount)}</span>
+      <button class="ghost" onclick="activateTransferTemplate('${t.id}')">Transférer</button>
+      <button class="del-btn" title="Supprimer le modèle" onclick="deleteTransfer('${t.id}')">✕</button>
+    </div>`;
+  }).join('') : '<div class="empty-note">Aucun modèle de transfert.</div>';
+
+  const transfers = all.filter(t=>!t.isTemplate).slice().sort((a,b)=> (b.date+b.createdAt).localeCompare(a.date+a.createdAt));
+  const totalHint = document.getElementById('transfer-total-hint');
+  if(totalHint){
+    const totalAmount = transfers.reduce((s,t)=>s+t.amount,0);
+    totalHint.textContent = transfers.length ? `total transféré : ${fmt(totalAmount)} sur ${transfers.length} transfert${transfers.length>1?'s':''}` : '';
+  }
+  if(transfers.length===0){
+    container.innerHTML = '<div class="empty-note">Aucun transfert effectué.</div>';
+    return;
+  }
+  container.innerHTML = transfers.map(t=>`
+    <div class="tpl-item" style="flex-wrap:nowrap;">
+      <span class="tpl-name" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${t.date} — ${escapeHtml(t.fromName)} → ${escapeHtml(t.toName)}</span>
+      <span class="tpl-amt" style="white-space:nowrap;">${fmt(t.amount)}</span>
+      <button class="del-btn" title="Annuler" onclick="deleteTransfer('${t.id}')">✕</button>
+    </div>`).join('');
+}
+
+function renderEnvelopes(){
+  const grid = document.getElementById('envelopes-grid');
+  const visibleEnvelopes = data.envelopes.filter(env=>!env.chargeYear && !env.archived);
+  renderArchivedEnvelopes();
+  if(visibleEnvelopes.length===0){
+    grid.innerHTML = '<div class="empty-note">Aucune enveloppe pour le moment. Ajoute un revenu ci-dessus pour commencer.</div>';
+    return;
+  }
+  grid.innerHTML = visibleEnvelopes.map(env=>{
+    const spent = envelopeSpent(env.id);
+    const reste = env.amount - spent;
+    const pct = env.amount > 0 ? Math.min(100, (spent/env.amount)*100) : 0;
+    const templates = data.expenses.filter(e=>e.envelopeId===env.id && e.isTemplate);
+    const tplHtml = templates.length ? templates.map(t=>{
+      const projected = reste - t.amount;
+      return `
+      <div class="tpl-item" style="flex-wrap:wrap;">
+        <span class="tpl-name"><span class="tpl-tag ${t.type}"></span>${escapeHtml(t.name)} <span style="color:${projected<0?'var(--pink)':'var(--ink-soft)'};font-size:11px;">— resterait ${fmt(projected)}</span></span>
+        <span class="tpl-amt">${fmt(t.amount)}</span>
+        <button class="ghost" onclick="editExpense('${t.id}')">Modifier</button>
+        <button class="ghost" onclick="activateTemplate('${t.id}')">Ajouter</button>
+        <button class="del-btn" title="Supprimer le modèle" onclick="deleteExpense('${t.id}')">✕</button>
+      </div>`;
+    }).join('') : '<div style="font-size:12px;color:var(--ink-soft);">Aucun modèle.</div>';
+    const envTransfers = (data.transfers || []).filter(t=>!t.isTemplate && (t.fromId===env.id || t.toId===env.id))
+      .slice().sort((a,b)=> (b.date+b.createdAt).localeCompare(a.date+a.createdAt));
+    const transfersHtml = envTransfers.length ? envTransfers.map(t=>{
+      const outgoing = t.fromId===env.id;
+      const other = outgoing ? t.toName : t.fromName;
+      return `
+      <div class="tpl-item" style="flex-wrap:nowrap;">
+        <span class="tpl-name" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${t.date} ${outgoing?'→':'←'} ${escapeHtml(other)}</span>
+        <span class="tpl-amt" style="color:${outgoing?'var(--pink)':'var(--green)'};white-space:nowrap;">${outgoing?'-':'+'}${fmt(t.amount)}</span>
+        <button class="del-btn" title="Annuler ce transfert" onclick="deleteTransfer('${t.id}')">✕</button>
+      </div>`;
+    }).join('') : '<div style="font-size:12px;color:var(--ink-soft);">Aucun transfert.</div>';
+    const tplExpenseTotal = templates.reduce((s,t)=>s+t.amount,0);
+    const tplTransfersIn = (data.transfers||[]).filter(t=>t.isTemplate && t.toId===env.id).reduce((s,t)=>s+t.amount,0);
+    const trfOutTotal = envTransfers.filter(t=>t.fromId===env.id).reduce((s,t)=>s+t.amount,0);
+    const trfInTotal = envTransfers.filter(t=>t.toId===env.id).reduce((s,t)=>s+t.amount,0);
+    const trfNet = trfInTotal - trfOutTotal;
+    return `
+      <div class="envelope-card" data-env-id="${env.id}">
+        <div class="envelope-flap"></div>
+        <div class="envelope-seal">${env.name.slice(0,2).toUpperCase()}</div>
+        <span class="drag-handle" title="Glisser pour réordonner" onpointerdown="envDragStart(event,'${env.id}')">⠿</span>
+        <div class="envelope-body">
+          <div class="envelope-name clickable" onclick="goToFiltered('envelope','${env.id}')" title="Voir les dépenses de cette enveloppe">
+            ${escapeHtml(env.name)} ↗
+            ${env.recurring ? `<span class="recurring-badge" title="Revenu récurrent">🔁 ${monthLabel(env.month)}</span>` : ''}
+            ${env.chargeYear ? `<span class="recurring-badge" title="Charge planifiée">📅 ${CAL_MONTH_NAMES[env.chargeMonth-1]} ${env.chargeYear}</span>` : ''}
+          </div>
+          <div class="envelope-figures">
+            <div class="line" style="color:var(--ink-soft);font-size:11px;">
+              <span>${env.dateUnknown || !env.date ? 'Date incertaine' : 'Ajoutée le ' + env.date}</span>
+            </div>
+            ${envTransfers.length ? `<div class="line" style="color:var(--ink-soft);font-size:11px;" title="Reçu ${fmt(trfInTotal)} — Envoyé ${fmt(trfOutTotal)}"><span>Transferts (total)</span><span style="color:${trfNet<0?'var(--pink)':'var(--green)'};">${trfNet>=0?'+':''}${fmt(trfNet)}</span></div>` : ''}
+            <div class="line"><span>Revenu</span><span>${fmt(env.amount)}</span></div>
+            ${env.plannedAmount ? `<div class="line" style="color:var(--yellow);"><span>Prévisionnel</span><span>${fmt(env.plannedAmount)}</span></div>` : ''}
+            <div class="line"><span>Dépensé</span><span>${fmt(spent)}</span></div>
+            <div class="line reste ${reste<0?'neg':'pos'}"><span>Reste</span><span>${fmt(reste)}</span></div>
+            ${tplTransfersIn>0 ? `<div class="line" style="color:var(--green);"><span>Transfert entrant prévu</span><span>+${fmt(tplTransfersIn)}</span></div>` : ''}
+          </div>
+          <div class="bar"><div class="bar-fill ${reste<0?'over':''}" style="width:${pct}%;"></div></div>
+          <div class="envelope-actions">
+            <button class="tpl-toggle" onclick="toggleTemplates('${env.id}')">Modèles (${templates.length}${tplExpenseTotal>0?' · '+fmt(tplExpenseTotal):''}) ▾</button>
+            <button class="tpl-toggle" onclick="toggleTransfers('${env.id}')">Transferts (${envTransfers.length}${envTransfers.length?' · '+(trfNet>=0?'+':'')+fmt(trfNet):''}) ▾</button>
+            <span>
+              <button class="del-btn" title="Archiver (masquer sans supprimer)" onclick="archiveEnvelope('${env.id}')">📦</button>
+              <button class="del-btn" title="Modifier l'enveloppe" onclick="editEnvelope('${env.id}')">✎</button>
+              <button class="del-btn" title="Supprimer l'enveloppe" onclick="deleteEnvelope('${env.id}')">✕</button>
+            </span>
+          </div>
+          <div class="templates-list" id="tpl-list-${env.id}">${tplHtml}</div>
+          <div class="templates-list" id="transfers-list-${env.id}">${transfersHtml}</div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function renderSummary(){
+  const totalRevenu = data.envelopes.reduce((s,e)=>s+e.amount,0);
+  const totalDepense = data.expenses.filter(e=>!e.isTemplate && e.envelopeId).reduce((s,e)=>s+e.amount,0);
+  document.getElementById('sum-revenu').textContent = fmt(totalRevenu);
+  document.getElementById('sum-depense').textContent = fmt(totalDepense);
+  document.getElementById('sum-reste').textContent = fmt(totalRevenu-totalDepense);
+}
+
+function renderBanner(){
+  const banner = document.getElementById('overspend-banner');
+  const over = data.envelopes.filter(env => (env.amount - envelopeSpent(env.id)) < 0);
+  if(over.length===0){ banner.style.display='none'; return; }
+  banner.style.display='flex';
+  banner.innerHTML = '⚠️ Dépassement sur ' + over.length + ' enveloppe' + (over.length>1?'s':'') + ' : ' +
+    over.map(env=>escapeHtml(env.name)).join(', ');
+}
+
+const MONTH_NAMES = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+function monthLabel(ym){ const [y,m]=ym.split('-'); return MONTH_NAMES[parseInt(m,10)-1] + ' ' + y; }
+
+function populateMonthOptions(){
+  const sel = document.getElementById('month-select');
+  const prev = sel.value || 'all';
+  const months = Array.from(new Set(data.expenses.filter(e=>!e.isTemplate && e.envelopeId && e.date).map(e=>e.date.slice(0,7)))).sort().reverse();
+  sel.innerHTML = '<option value="all">Tous les mois</option>' + months.map(m=>`<option value="${m}">${monthLabel(m)}</option>`).join('');
+  sel.value = (months.includes(prev) || prev==='all') ? prev : 'all';
+}
+
+function onMonthChange(){ renderHistory(); renderApercu(); }
+
+function clearHistoryFilters(){
+  document.getElementById('filter-envelope').value = 'all';
+  document.getElementById('filter-type').value = 'all';
+  renderHistory();
+}
+
+function goToFiltered(kind, value){
+  if(kind==='envelope'){
+    document.getElementById('filter-envelope').value = value;
+    document.getElementById('filter-type').value = 'all';
+  } else if(kind==='type'){
+    document.getElementById('filter-envelope').value = 'all';
+    document.getElementById('filter-type').value = value;
+  }
+  showTab('history');
+  renderHistory();
+}
+
+function toggleHistoryDateSort(){
+  historyDateSort = historyDateSort==='asc' ? 'desc' : 'asc';
+  renderHistory();
+}
+
+function renderHistory(){
+  const filtEnv = document.getElementById('filter-envelope').value;
+  const filtType = document.getElementById('filter-type').value;
+  const filtMonth = document.getElementById('month-select').value;
+  let list = data.expenses.filter(e=>!e.isTemplate && e.envelopeId);
+  if(filtEnv && filtEnv!=='all') list = list.filter(e=>e.envelopeId===filtEnv);
+  if(filtType!=='all') list = list.filter(e=>e.type===filtType);
+  if(filtMonth!=='all') list = list.filter(e=>e.date && e.date.startsWith(filtMonth));
+  list = list.slice().sort((a,b)=>{
+    const av = (a.date||'')+a.createdAt, bv = (b.date||'')+b.createdAt;
+    return historyDateSort==='asc' ? av.localeCompare(bv) : bv.localeCompare(av);
+  });
+  const container = document.getElementById('history-container');
+  const filterActive = (filtEnv && filtEnv!=='all') || filtType!=='all';
+  const envNameFor = id => (data.envelopes.find(e=>e.id===id)||{}).name || '—';
+  let summaryHtml = '';
+  if(filterActive){
+    const label = (filtEnv && filtEnv!=='all') ? escapeHtml(envNameFor(filtEnv)) : (filtType==='besoin' ? 'Besoin' : 'Envie');
+    const sumTotal = list.reduce((s,e)=>s+e.amount,0);
+    summaryHtml = `<div class="filter-sum">Filtre : <b>${label}</b> — ${list.length} dépense${list.length>1?'s':''}, total <b>${fmt(sumTotal)}</b>
+      <button class="ghost" onclick="clearHistoryFilters()">Réinitialiser</button></div>`;
+  }
+  summaryHtml += `<div class="check-row" style="margin-bottom:10px;">
+    <input type="checkbox" id="history-daily-totals" onchange="toggleDailyTotals()" ${historyDailyTotals?'checked':''}>
+    <label for="history-daily-totals" style="text-transform:none;letter-spacing:0;cursor:pointer;">Afficher le total par jour</label>
+  </div>`;
+  if(list.length===0){
+    container.innerHTML = summaryHtml + '<div class="empty-note">Aucune dépense pour cette sélection.</div>';
+    return;
+  }
+  const envName = id => (data.envelopes.find(e=>e.id===id)||{}).name || '—';
+  const arrow = historyDateSort==='asc' ? ' ▲' : ' ▼';
+
+  let rowsHtml = '';
+  if(historyDailyTotals){
+    const groups = [];
+    let currentKey = null, currentGroup = null;
+    list.forEach(e=>{
+      const key = e.dateUnknown || !e.date ? '__unknown__' : e.date;
+      if(key !== currentKey){
+        currentKey = key;
+        currentGroup = { key, label: key==='__unknown__' ? 'Date inconnue' : key, items: [] };
+        groups.push(currentGroup);
+      }
+      currentGroup.items.push(e);
+    });
+    rowsHtml = groups.map(g=>{
+      const dayTotal = g.items.reduce((s,e)=>s+e.amount,0);
+      const header = `<tr class="day-header-row"><td colspan="6">${g.key==='__unknown__' ? '<span style="font-style:italic;color:var(--ink-soft);">Date inconnue</span>' : g.label} <span style="float:right;color:var(--green);">Total : ${fmt(dayTotal)} (${g.items.length})</span></td></tr>`;
+      const rows = g.items.map(e=>historyRowHtml(e, envName)).join('');
+      return header + rows;
+    }).join('');
+  } else {
+    rowsHtml = list.map(e=>historyRowHtml(e, envName)).join('');
+  }
+
+  container.innerHTML = summaryHtml + `
+    <div class="table-scroll">
+    <table class="history">
+      <thead><tr><th class="sortable" onclick="toggleHistoryDateSort()">Date${arrow}</th><th>Description</th><th>Enveloppe</th><th>Type</th><th style="text-align:right;">Montant</th><th></th></tr></thead>
+      <tbody>
+        ${rowsHtml}
+      </tbody>
+    </table>
+    </div>`;
+}
+
+function historyRowHtml(e, envName){
+  return `
+    <tr>
+      <td>${e.dateUnknown || !e.date ? '<span style="color:var(--ink-soft);font-style:italic;">Date inconnue</span>' : e.date}</td>
+      <td>${escapeHtml(e.name)}${e.justification ? `<br><span style="font-size:11px;color:var(--ink-soft);font-style:italic;">📝 ${escapeHtml(e.justification)}</span>` : ''}</td>
+      <td>${escapeHtml(envName(e.envelopeId))}</td>
+      <td><span class="dot ${e.type}"></span>${e.type==='besoin'?'Besoin':'Envie'}</td>
+      <td class="amt-cell">${fmt(e.amount)}</td>
+      <td>
+        <button class="del-btn" title="Modifier" onclick="editExpense('${e.id}')">✎</button>
+        <button class="del-btn" title="Supprimer" onclick="deleteExpense('${e.id}')">✕</button>
+      </td>
+    </tr>`;
+}
+
+function toggleDailyTotals(){
+  historyDailyTotals = !historyDailyTotals;
+  renderHistory();
+}
+
+function renderApercu(){
+  const filtMonth = document.getElementById('month-select').value;
+  let list = data.expenses.filter(e=>!e.isTemplate && e.envelopeId);
+  if(filtMonth!=='all') list = list.filter(e=>e.date && e.date.startsWith(filtMonth));
+
+  const besoinTotal = list.filter(e=>e.type==='besoin').reduce((s,e)=>s+e.amount,0);
+  const envieTotal = list.filter(e=>e.type==='envie').reduce((s,e)=>s+e.amount,0);
+  const total = besoinTotal + envieTotal;
+  const chart = document.getElementById('apercu-chart');
+  const legend = document.getElementById('apercu-legend');
+
+  if(total===0){
+    chart.style.background = 'conic-gradient(var(--line) 0deg 360deg)';
+    legend.innerHTML = '<div class="empty-note" style="border:none;padding:4px 0;">Aucune dépense sur cette période.</div>';
+  } else {
+    const besoinDeg = (besoinTotal/total)*360;
+    chart.style.background = `conic-gradient(var(--blue) 0deg ${besoinDeg}deg, var(--pink) ${besoinDeg}deg 360deg)`;
+    const besoinPct = Math.round((besoinTotal/total)*100);
+    const enviePct = 100 - besoinPct;
+    legend.innerHTML = `
+      <div class="leg-row clickable" onclick="goToFiltered('type','besoin')" title="Voir toutes les dépenses Besoin"><span class="dot besoin"></span>Besoin (${besoinPct}%)<b>${fmt(besoinTotal)}</b></div>
+      <div class="leg-row clickable" onclick="goToFiltered('type','envie')" title="Voir toutes les dépenses Envie"><span class="dot envie"></span>Envie (${enviePct}%)<b>${fmt(envieTotal)}</b></div>
+      <div class="leg-row" style="border-top:1px dashed var(--line);padding-top:8px;"><span>Total dépensé</span><b>${fmt(total)}</b></div>
+    `;
+  }
+
+  const envContainer = document.getElementById('apercu-envelopes');
+  if(data.envelopes.length===0){
+    envContainer.innerHTML = '<div class="empty-note">Aucune enveloppe.</div>';
+  } else {
+    envContainer.innerHTML = data.envelopes.map(env=>{
+      const spent = list.filter(e=>e.envelopeId===env.id).reduce((s,e)=>s+e.amount,0);
+      const pct = env.amount>0 ? Math.min(100, (spent/env.amount)*100) : 0;
+      return `
+        <div class="apercu-env-row clickable" onclick="goToFiltered('envelope','${env.id}')" title="Voir les dépenses de cette enveloppe">
+          <span class="name">${escapeHtml(env.name)}</span>
+          <div class="bar"><div class="bar-fill ${spent>env.amount?'over':''}" style="width:${pct}%;"></div></div>
+          <span class="amt">${fmt(spent)}</span>
+        </div>`;
+    }).join('');
+  }
+}
+
+function addCheck(){
+  const amount = parseFloat(document.getElementById('verif-amount').value);
+  const date = document.getElementById('verif-date').value || todayStr();
+  const note = document.getElementById('verif-note').value.trim();
+  if(isNaN(amount) || amount < 0){ customAlert('Merci de saisir un montant valide.'); return; }
+  const totalRevenu = data.envelopes.reduce((s,e)=>s+e.amount,0);
+  const totalDepense = data.expenses.filter(e=>!e.isTemplate && e.envelopeId).reduce((s,e)=>s+e.amount,0);
+  const theorique = totalRevenu - totalDepense;
+  const ecart = amount - theorique;
+  if(!data.checks) data.checks = [];
+  data.checks.push({ id: uid(), date, reel: amount, theorique, ecart, note, createdAt: new Date().toISOString() });
+  document.getElementById('verif-amount').value = '';
+  document.getElementById('verif-note').value = '';
+  save(); renderAll();
+}
+
+function deleteCheck(id){
+  data.checks = data.checks.filter(c=>c.id!==id);
+  save(); renderAll();
+}
+
+function startApplyCheck(id){
+  const c = data.checks.find(x=>x.id===id);
+  if(!c) return;
+  const ec = c.reel - c.theorique;
+  if(ec===0) return;
+  const panel = document.getElementById('verif-apply-panel');
+  if(!panel) return;
+  if(data.envelopes.length===0){
+    panel.innerHTML = '<div class="empty-note">Crée d\'abord une enveloppe pour pouvoir y appliquer un écart.</div>';
+    return;
+  }
+  const label = ec > 0 ? 'Ajouter ce surplus' : 'Retirer ce déficit';
+  const envOptions = data.envelopes.map(e=>`<option value="${e.id}">${escapeHtml(envelopeDisplayName(e))}</option>`).join('');
+  panel.innerHTML = `
+    <div class="card-form" style="margin-top:12px;">
+      <div class="row">
+        <div class="field" style="max-width:280px;">
+          <label>${label} (${(ec>0?'+':'')+fmt(ec)}) — enveloppe</label>
+          <select id="verif-apply-envelope">${envOptions}</select>
+        </div>
+        <button class="primary" onclick="confirmApplyCheck('${c.id}')">Confirmer</button>
+        <button class="ghost" onclick="document.getElementById('verif-apply-panel').innerHTML=''">Annuler</button>
+      </div>
+    </div>`;
+}
+
+function confirmApplyCheck(id){
+  const c = data.checks.find(x=>x.id===id);
+  if(!c) return;
+  const ec = c.reel - c.theorique;
+  const envelopeId = document.getElementById('verif-apply-envelope').value;
+  const env = data.envelopes.find(e=>e.id===envelopeId);
+  if(!env){ customAlert('Choisis une enveloppe.'); return; }
+  env.amount += ec;
+  if(!data.topups) data.topups = [];
+  data.topups.push({
+    id: uid(), envelopeId, envelopeName: env.name, amount: ec,
+    justification: (ec>0?'Surplus':'Déficit') + ' de vérification (pointage du ' + c.date + ')',
+    date: todayStr(), createdAt: new Date().toISOString()
+  });
+  c.applied = true;
+  save(); renderAll();
+}
+
+const CAL_MONTH_NAMES = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+
+function changeCalendarYear(delta){
+  calendarYear += delta;
+  renderCalendar();
+}
+
+function addMonthCharge(year, month){
+  const nameInput = document.getElementById(`mc-name-${year}-${month}`);
+  const amountInput = document.getElementById(`mc-amount-${year}-${month}`);
+  const name = nameInput.value.trim();
+  const rawAmount = amountInput.value.trim();
+  const planned = rawAmount === '' ? null : parseFloat(rawAmount);
+  if(!name){ customAlert('Merci de donner un nom à la charge.'); return; }
+  if(planned !== null && (isNaN(planned) || planned <= 0)){ customAlert('Le montant doit être un nombre valide (ou laisse-le vide).'); return; }
+  data.envelopes.push({
+    id: uid(), name, amount: 0, plannedAmount: planned, createdAt: new Date().toISOString(),
+    date: todayStr(), dateUnknown: false, recurring: false, recurringId: null, month: null,
+    chargeYear: year, chargeMonth: month
+  });
+  nameInput.value = '';
+  amountInput.value = '';
+  save(); renderAll();
+}
+
+function toggleChargeNotNeeded(id){
+  const env = data.envelopes.find(e=>e.id===id);
+  if(!env) return;
+  env.notNeeded = !env.notNeeded;
+  save(); renderAll();
+}
+
+function deleteAllChargesForMonth(year, month){
+  const envs = data.envelopes.filter(e=>e.chargeYear===year && e.chargeMonth===month);
+  if(envs.length===0) return;
+  customConfirm(`Supprimer les ${envs.length} charge(s) de ${CAL_MONTH_NAMES[month-1]} ${year} et leurs dépenses liées ?`, () => {
+    const ids = envs.map(e=>e.id);
+    data.envelopes = data.envelopes.filter(e=>!ids.includes(e.id));
+    data.expenses = data.expenses.filter(e=>!ids.includes(e.envelopeId));
+    save(); renderAll();
+  });
+}
+
+function setSavingsEnvelope(){
+  const sel = document.getElementById('savings-envelope');
+  data.savingsEnvelopeId = sel.value || null;
+  save(); renderSavings();
+}
+
+function changeSavingsYear(delta){
+  savingsYear += delta;
+  renderSavings();
+}
+
+function getSavingsGoal(year, month){
+  const g = data.savingsGoals.find(g=>g.year===year && g.month===month);
+  return g ? g.amount : null;
+}
+
+function setSavingsGoal(year, month){
+  const input = document.getElementById(`sg-goal-${year}-${month}`);
+  const raw = input.value.trim();
+  const amount = raw === '' ? null : parseFloat(raw);
+  if(amount !== null && (isNaN(amount) || amount < 0)){ customAlert('Merci de saisir un nombre valide (ou laisse vide pour retirer l\'objectif).'); return; }
+  const existing = data.savingsGoals.find(g=>g.year===year && g.month===month);
+  if(amount === null){
+    data.savingsGoals = data.savingsGoals.filter(g=>!(g.year===year && g.month===month));
+  } else if(existing){
+    existing.amount = amount;
+  } else {
+    data.savingsGoals.push({ id: uid(), year, month, amount });
+  }
+  save(); renderSavings();
+}
+
+function computeSavedForMonth(envelopeId, year, month){
+  const prefix = year + '-' + String(month).padStart(2,'0');
+  const fromTopups = data.topups.filter(t=>t.envelopeId===envelopeId && t.date && t.date.startsWith(prefix)).reduce((s,t)=>s+t.amount,0);
+  const fromTransfers = data.transfers.filter(t=>!t.isTemplate && t.toId===envelopeId && t.date && t.date.startsWith(prefix)).reduce((s,t)=>s+t.amount,0);
+  return fromTopups + fromTransfers;
+}
+
+function renderSavings(){
+  const sel = document.getElementById('savings-envelope');
+  const label = document.getElementById('savings-year-label');
+  const summaryEl = document.getElementById('savings-summary');
+  const monthsEl = document.getElementById('savings-months');
+  if(!sel || !label || !monthsEl) return;
+
+  const eligible = data.envelopes.filter(e=>!e.chargeYear && !e.archived);
+  const prevSel = sel.value || data.savingsEnvelopeId || '';
+  sel.innerHTML = '<option value="">— choisir une enveloppe —</option>' + eligible.map(e=>`<option value="${e.id}">${escapeHtml(e.name)}</option>`).join('');
+  if(eligible.some(e=>e.id===prevSel)) sel.value = prevSel; else sel.value = '';
+  if(data.savingsEnvelopeId && !eligible.some(e=>e.id===data.savingsEnvelopeId)){
+    data.savingsEnvelopeId = null;
+  }
+
+  label.textContent = savingsYear;
+
+  if(!data.savingsEnvelopeId){
+    summaryEl.innerHTML = '';
+    monthsEl.innerHTML = '<div class="empty-note">Choisis d\'abord une enveloppe d\'épargne ci-dessus.</div>';
+    return;
+  }
+
+  const envelope = data.envelopes.find(e=>e.id===data.savingsEnvelopeId);
+  if(!envelope){
+    monthsEl.innerHTML = '<div class="empty-note">Cette enveloppe n\'existe plus. Choisis-en une autre.</div>';
+    return;
+  }
+
+  let yearGoalTotal = 0, yearSavedTotal = 0;
+  for(let m=1; m<=12; m++){
+    const goal = getSavingsGoal(savingsYear, m);
+    if(goal) yearGoalTotal += goal;
+    yearSavedTotal += computeSavedForMonth(envelope.id, savingsYear, m);
+  }
+  summaryEl.innerHTML = `
+    <div class="summary" style="margin-bottom:18px;">
+      <div class="stat revenu"><label>Objectif annuel</label><div class="val">${fmt(yearGoalTotal)}</div></div>
+      <div class="stat reste"><label>Épargné en ${savingsYear}</label><div class="val">${fmt(yearSavedTotal)}</div></div>
+    </div>`;
+
+  const currentYear = new Date().getFullYear();
+  const currentMonth = new Date().getMonth() + 1;
+
+  monthsEl.innerHTML = CAL_MONTH_NAMES.map((mname, idx)=>{
+    const m = idx + 1;
+    const isCurrent = savingsYear === currentYear && m === currentMonth;
+    const goal = getSavingsGoal(savingsYear, m);
+    const saved = computeSavedForMonth(envelope.id, savingsYear, m);
+    const pct = goal ? Math.min(100, (saved/goal)*100) : 0;
+    const reached = goal && saved >= goal;
+    return `
+      <div class="card-form" style="margin-top:10px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:6px;">
+          <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:14px;">
+            ${mname} ${savingsYear} ${isCurrent ? '<span class="recurring-badge">en cours</span>' : ''}
+            ${reached ? '<span class="recurring-badge" style="border-color:var(--green);color:var(--green);">✓ Objectif atteint</span>' : ''}
+          </div>
+        </div>
+        <div class="row" style="gap:6px;margin-bottom:8px;">
+          <input id="sg-goal-${savingsYear}-${m}" type="number" min="0" step="0.01" placeholder="Objectif du mois (optionnel)" value="${goal!==null?goal:''}" style="flex:1;min-width:150px;font-size:13px;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--paper-alt);color:var(--ink);">
+          <button class="ghost" onclick="setSavingsGoal(${savingsYear}, ${m})">Enregistrer</button>
+        </div>
+        ${goal ? `<div class="bar" style="margin-bottom:6px;"><div class="bar-fill" style="width:${pct}%;"></div></div>` : ''}
+        <div style="font-size:12px;color:var(--ink-soft);">
+          Épargné ce mois : <b style="color:var(--ink);">${fmt(saved)}</b>${goal ? ` / ${fmt(goal)} objectif` : ' (aucun objectif fixé)'}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function renderCalendar(){
+  const label = document.getElementById('calendar-year-label');
+  const container = document.getElementById('calendar-months');
+  if(!label || !container) return;
+  label.textContent = calendarYear;
+
+  const currentYear = new Date().getFullYear();
+  const currentMonth = new Date().getMonth() + 1;
+
+  container.innerHTML = CAL_MONTH_NAMES.map((mname, idx)=>{
+    const m = idx + 1;
+    const isPast = calendarYear < currentYear || (calendarYear === currentYear && m < currentMonth);
+    const isCurrent = calendarYear === currentYear && m === currentMonth;
+    const envs = data.envelopes.filter(e=>e.chargeYear===calendarYear && e.chargeMonth===m);
+    const totalPlanned = envs.filter(e=>!e.notNeeded).reduce((s,e)=>s+(e.plannedAmount||0),0);
+    const totalFunded = envs.reduce((s,e)=>s+e.amount,0);
+    const envsHtml = envs.length ? envs.map(env=>{
+      const spent = envelopeSpent(env.id);
+      const reste = env.amount - spent;
+      const planned = env.plannedAmount;
+      const funded = env.amount > 0;
+      const pct = env.amount>0 ? Math.min(100,(spent/env.amount)*100) : 0;
+      if(env.notNeeded){
+        return `
+        <div class="tpl-item" style="flex-wrap:wrap;align-items:center;opacity:0.55;">
+          <span class="tpl-name" style="min-width:110px;text-decoration:line-through;">${escapeHtml(env.name)}</span>
+          <span style="flex:1;font-size:11.5px;font-style:italic;color:var(--ink-soft);">Non nécessaire ce mois-ci</span>
+          <button class="ghost" onclick="toggleChargeNotNeeded('${env.id}')">Réactiver</button>
+          <button class="del-btn" title="Supprimer" onclick="deleteEnvelope('${env.id}')">✕</button>
+        </div>`;
+      }
+      const isFinished = funded && spent > 0 && reste <= 0;
+      return `
+      <div style="border-bottom:1px solid var(--line);padding:8px 0;${isFinished?'opacity:0.7;':''}">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px;">
+          <span class="tpl-name clickable" onclick="goToFiltered('envelope','${env.id}')" style="font-weight:600;${isFinished?'text-decoration:line-through;':''}">${escapeHtml(env.name)} ↗</span>
+          ${isFinished ? '<span class="recurring-badge" style="border-color:var(--green);color:var(--green);">✓ Terminé</span>' : ''}
+          <span>
+            <button class="ghost" title="Marquer non nécessaire ce mois-ci" onclick="toggleChargeNotNeeded('${env.id}')">⏸</button>
+            <button class="ghost" onclick="editEnvelope('${env.id}')">✎</button>
+            <button class="del-btn" title="Supprimer" onclick="deleteEnvelope('${env.id}')">✕</button>
+          </span>
+        </div>
+        <div style="font-size:11.5px;color:var(--ink-soft);margin-bottom:4px;">
+          ${planned ? `Prévisionnel : ${fmt(planned)} — ` : ''}${funded ? `Financé : ${fmt(env.amount)}` : 'Pas encore financé'}
+        </div>
+        ${funded ? `<div class="bar" style="margin-bottom:4px;"><div class="bar-fill ${reste<0?'over':''}" style="width:${pct}%;"></div></div>
+        <div style="font-size:12px;color:var(--ink);">Dépensé : <b>${fmt(spent)}</b> — Reste : <b style="color:${reste<0?'var(--pink)':'var(--green)'};">${fmt(reste)}</b></div>` : ''}
+      </div>`;
+    }).join('') : '<div style="font-size:12px;color:var(--ink-soft);padding:4px 0;">Aucune charge pour ce mois.</div>';
+
+    return `
+      <div class="card-form" style="margin-top:12px;${isPast?'opacity:0.55;':''}">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px;">
+          <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:14px;">
+            ${mname} ${calendarYear} ${isCurrent ? '<span class="recurring-badge">en cours</span>' : ''}
+          </div>
+          ${envs.length ? `<button class="ghost" style="border-color:var(--pink);color:var(--pink);font-size:11px;padding:5px 8px;" onclick="deleteAllChargesForMonth(${calendarYear}, ${m})">Tout supprimer</button>` : ''}
+        </div>
+        ${envs.length ? `<div style="font-size:11.5px;color:var(--ink-soft);margin-bottom:10px;">Total prévisionnel : <b style="color:var(--yellow);">${fmt(totalPlanned)}</b> — Total financé : <b style="color:var(--green);">${fmt(totalFunded)}</b></div>` : ''}
+        <div style="margin-bottom:10px;">${envsHtml}</div>
+        <div class="row" style="gap:6px;">
+          <input id="mc-name-${calendarYear}-${m}" type="text" placeholder="Ex: Loyer, Nourriture..." style="flex:1;min-width:120px;font-size:13px;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--paper-alt);color:var(--ink);">
+          <input id="mc-amount-${calendarYear}-${m}" type="number" min="0" step="0.01" placeholder="Montant (optionnel)" style="flex:1;min-width:90px;font-size:13px;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--paper-alt);color:var(--ink);">
+          <button class="ghost" onclick="addMonthCharge(${calendarYear}, ${m})">+ Ajouter</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function renderAllTemplates(){
+  const expContainer = document.getElementById('all-expense-templates');
+  const trfContainer = document.getElementById('all-transfer-templates');
+  if(!expContainer || !trfContainer) return;
+
+  const expTemplates = data.expenses.filter(e=>e.isTemplate)
+    .slice().sort((a,b)=> (a.envelopeId||'').localeCompare(b.envelopeId||''));
+  expContainer.innerHTML = expTemplates.length ? expTemplates.map(t=>{
+    const env = data.envelopes.find(e=>e.id===t.envelopeId);
+    const envName = env ? env.name : '—';
+    const reste = env ? env.amount - envelopeSpent(env.id) : null;
+    const projected = reste!==null ? reste - t.amount : null;
+    return `
+    <div class="tpl-item" style="flex-wrap:wrap;">
+      <span class="tpl-name"><span class="tpl-tag ${t.type}"></span><b>${escapeHtml(envName)}</b> — ${escapeHtml(t.name)}
+        ${projected!==null ? `<span style="color:${projected<0?'var(--pink)':'var(--ink-soft)'};font-size:11px;"> — resterait ${fmt(projected)}</span>` : ''}
+      </span>
+      <span class="tpl-amt">${fmt(t.amount)}</span>
+      <button class="ghost" onclick="editExpense('${t.id}')">Modifier</button>
+      <button class="ghost" onclick="activateTemplate('${t.id}')">Ajouter</button>
+      <button class="del-btn" title="Supprimer" onclick="deleteExpense('${t.id}')">✕</button>
+    </div>`;
+  }).join('') : '<div class="empty-note">Aucun modèle de dépense, toutes enveloppes confondues.</div>';
+
+  const trfTemplates = (data.transfers || []).filter(t=>t.isTemplate);
+  trfContainer.innerHTML = trfTemplates.length ? trfTemplates.map(t=>{
+    const fromEnv = data.envelopes.find(e=>e.id===t.fromId);
+    const toEnv = data.envelopes.find(e=>e.id===t.toId);
+    const fromReste = fromEnv ? fromEnv.amount - envelopeSpent(fromEnv.id) : null;
+    const toReste = toEnv ? toEnv.amount - envelopeSpent(toEnv.id) : null;
+    const projLabel = (fromReste!==null && toReste!==null)
+      ? `<span style="color:var(--ink-soft);font-size:11px;"> — ${escapeHtml(t.fromName)} resterait ${fmt(fromReste - t.amount)}, ${escapeHtml(t.toName)} resterait ${fmt(toReste + t.amount)}</span>` : '';
+    return `
+    <div class="tpl-item" style="flex-wrap:wrap;">
+      <span class="tpl-name">${escapeHtml(t.fromName)} → ${escapeHtml(t.toName)}${projLabel}</span>
+      <span class="tpl-amt">${fmt(t.amount)}</span>
+      <button class="ghost" onclick="activateTransferTemplate('${t.id}')">Transférer</button>
+      <button class="del-btn" title="Supprimer" onclick="deleteTransfer('${t.id}')">✕</button>
+    </div>`;
+  }).join('') : '<div class="empty-note">Aucun modèle de transfert.</div>';
+}
+
+function renderVerif(){
+  const totalRevenu = data.envelopes.reduce((s,e)=>s+e.amount,0);
+  const totalDepense = data.expenses.filter(e=>!e.isTemplate && e.envelopeId).reduce((s,e)=>s+e.amount,0);
+  const theorique = totalRevenu - totalDepense;
+  document.getElementById('verif-theorique').textContent = fmt(theorique);
+
+  const checks = (data.checks || []).slice().sort((a,b)=> (b.date+b.createdAt).localeCompare(a.date+a.createdAt));
+  const last = checks[0];
+  const declareEl = document.getElementById('verif-declare');
+  const ecartEl = document.getElementById('verif-ecart');
+  const ecartLabel = document.getElementById('verif-ecart-label');
+  const ecartCard = document.getElementById('verif-ecart-card');
+
+  if(!last){
+    declareEl.textContent = '—';
+    ecartEl.textContent = '—';
+    ecartLabel.textContent = 'Écart';
+  } else {
+    declareEl.textContent = fmt(last.reel);
+    const ecartNow = last.reel - theorique;
+    ecartEl.textContent = (ecartNow > 0 ? '+' : '') + fmt(ecartNow);
+    if(ecartNow < 0){
+      ecartLabel.textContent = 'Déficit';
+      ecartCard.className = 'stat depense';
+    } else if(ecartNow > 0){
+      ecartLabel.textContent = 'Surplus';
+      ecartCard.className = 'stat revenu';
+    } else {
+      ecartLabel.textContent = 'Équilibré';
+      ecartCard.className = 'stat reste';
+    }
+  }
+
+  const container = document.getElementById('verif-history');
+  if(checks.length===0){
+    container.innerHTML = '<div class="empty-note">Aucun pointage enregistré. Déclare ce que tu as réellement en main pour comparer.</div>';
+    return;
+  }
+  container.innerHTML = `
+    <div class="table-scroll">
+    <table class="history">
+      <thead><tr><th>Date</th><th style="text-align:right;">Théorique</th><th style="text-align:right;">Réel déclaré</th><th style="text-align:right;">Écart</th><th>Note</th><th></th></tr></thead>
+      <tbody>
+        ${checks.map(c=>{
+          const ec = c.reel - c.theorique;
+          const color = ec < 0 ? 'var(--pink)' : (ec > 0 ? 'var(--green)' : 'var(--ink-soft)');
+          return `<tr>
+            <td>${c.date}</td>
+            <td class="amt-cell">${fmt(c.theorique)}</td>
+            <td class="amt-cell">${fmt(c.reel)}</td>
+            <td class="amt-cell" style="color:${color};font-weight:700;">${(ec>0?'+':'')+fmt(ec)}</td>
+            <td style="color:var(--ink-soft);max-width:180px;">${c.note ? escapeHtml(c.note) : '—'}</td>
+            <td style="white-space:nowrap;">
+              ${ec===0 ? '' : c.applied
+                ? '<span style="font-size:11px;color:var(--ink-soft);">✓ Appliqué</span>'
+                : `<button class="ghost" title="Appliquer cet écart à une enveloppe" onclick="startApplyCheck('${c.id}')">↔ Appliquer</button>`}
+              <button class="del-btn" title="Supprimer" onclick="deleteCheck('${c.id}')">✕</button>
+            </td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+    </div>
+    <div id="verif-apply-panel"></div>`;
+}
+
+function renderAll(){
+  renderSelects();
+  populateMonthOptions();
+  renderEnvelopes();
+  renderSummary();
+  renderBanner();
+  renderHistory();
+  renderApercu();
+  renderVerif();
+  renderTransferHistory();
+  renderTopupHistory();
+  renderUnassigned();
+  renderAllTemplates();
+  renderCalendar();
+  renderSavings();
+  updateUndoButton();
+}
+
+function tickClock(){
+  const d = new Date();
+  document.getElementById('clock-time').textContent = d.toLocaleTimeString('fr-FR');
+  document.getElementById('clock-date').textContent = d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+}
+setInterval(tickClock, 1000);
+tickClock();
+
+load();
+</script>
+
+<script>
+// Enregistrement du service worker pour le fonctionnement hors-ligne (PWA)
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch((err) => {
+      console.warn('Échec d\'enregistrement du service worker :', err);
+    });
+  });
+}
+</script>
