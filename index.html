@@ -2,14 +2,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 
 <!-- PWA : manifest, thème, icônes -->
-<link rel="manifest" href="./manifest.json">
+<link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#0A0E14">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Enveloppes">
-<link rel="icon" href="./icon-192.png">
-<link rel="apple-touch-icon" href="./icon-192.png">
+<link rel="icon" href="/icon-192.png">
+<link rel="apple-touch-icon" href="/icon-192.png">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
@@ -342,6 +342,7 @@
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
         <button class="ghost" id="currency-toggle" onclick="toggleCurrency()" style="font-weight:700;">MAD ⇄ FCFA</button>
+        <div id="entry-currency-label" style="font-size:11px;font-weight:700;color:var(--green);border:1px solid var(--green);border-radius:20px;padding:2px 10px;"></div>
         <div id="rate-editor" style="display:none;align-items:center;gap:4px;font-size:11px;color:var(--ink-soft);">
           1 MAD = <input id="rate-input" type="number" min="0" step="0.01" value="60" onchange="updateExchangeRate()" style="width:55px;font-size:11px;padding:3px 5px;border:1px solid var(--line);border-radius:4px;background:var(--paper-alt);color:var(--ink);"> FCFA
         </div>
@@ -396,7 +397,7 @@
             <input id="env-name" type="text" placeholder="Salaire juillet">
           </div>
           <div class="field">
-            <label>Montant (MAD)</label>
+            <label>Montant (<span class="amount-unit">MAD</span>)</label>
             <input id="env-amount" type="number" min="0" step="0.01" placeholder="5000">
           </div>
           <div class="field">
@@ -440,7 +441,7 @@
             <select id="topup-envelope"></select>
           </div>
           <div class="field">
-            <label>Montant (MAD)</label>
+            <label>Montant (<span class="amount-unit">MAD</span>)</label>
             <input id="topup-amount" type="number" min="0" step="0.01" placeholder="300">
           </div>
           <div class="field">
@@ -468,7 +469,7 @@
             <select id="transfer-to"></select>
           </div>
           <div class="field">
-            <label>Montant (MAD)</label>
+            <label>Montant (<span class="amount-unit">MAD</span>)</label>
             <input id="transfer-amount" type="number" min="0" step="0.01" placeholder="200">
           </div>
           <div class="field">
@@ -500,7 +501,7 @@
             <input id="u-name" type="text" placeholder="Ex: Réparation voiture">
           </div>
           <div class="field">
-            <label>Montant (MAD)</label>
+            <label>Montant (<span class="amount-unit">MAD</span>)</label>
             <input id="u-amount" type="number" min="0" step="0.01" placeholder="150">
           </div>
           <div class="field">
@@ -546,7 +547,7 @@
             <input id="exp-name" type="text" placeholder="Courses, essence...">
           </div>
           <div class="field">
-            <label>Montant (MAD)</label>
+            <label>Montant (<span class="amount-unit">MAD</span>)</label>
             <input id="exp-amount" type="number" min="0" step="0.01" placeholder="150">
           </div>
           <div class="field">
@@ -654,7 +655,7 @@
       <div class="card-form">
         <div class="row">
           <div class="field">
-            <label>Montant réel en main (liquide)</label>
+            <label>Montant réel en main, liquide (<span class="amount-unit">MAD</span>)</label>
             <input id="verif-amount" type="number" min="0" step="0.01" placeholder="Ex: 1250">
           </div>
           <div class="field">
@@ -733,6 +734,8 @@ function customAlert(message){
 }
 let currentCurrency = 'MAD';
 let exchangeRate = 60; // 1 MAD ≈ 60 FCFA (approximatif, modifiable)
+
+// Formate un montant selon la devise actuellement sélectionnée dans toute l'appli, avec conversion.
 function fmt(n){
   if(currentCurrency === 'FCFA'){
     const converted = Math.round(n * exchangeRate);
@@ -740,6 +743,8 @@ function fmt(n){
   }
   return (Math.round(n*100)/100).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' MAD';
 }
+function getEnvelopeById(id){ return data.envelopes.find(e=>e.id===id); }
+
 function todayStr(){ const d=new Date(); return d.toISOString().slice(0,10); }
 
 const hasCloudStorage = (typeof window.storage !== 'undefined' && window.storage !== null);
@@ -939,9 +944,30 @@ function toggleCurrency(){
 function updateCurrencyButton(){
   const btn = document.getElementById('currency-toggle');
   const rateEditor = document.getElementById('rate-editor');
+  const entryLabel = document.getElementById('entry-currency-label');
   if(!btn) return;
   btn.textContent = currentCurrency === 'MAD' ? 'MAD → FCFA' : 'FCFA → MAD';
   if(rateEditor) rateEditor.style.display = currentCurrency === 'FCFA' ? 'flex' : 'none';
+  if(entryLabel) entryLabel.textContent = 'Saisie en ' + currentCurrency;
+  updateAmountUnitLabels();
+}
+
+// Convertit un montant tapé par l'utilisateur (dans la devise actuellement affichée)
+// vers le MAD, la devise de référence utilisée pour tout le stockage interne.
+function parseAmt(str){
+  const n = parseFloat(str);
+  if(isNaN(n)) return NaN;
+  return currentCurrency === 'FCFA' ? n / exchangeRate : n;
+}
+
+// Convertit un montant stocké (en MAD) vers la devise actuellement affichée, pour préremplir un formulaire d'édition.
+function toDisplayAmt(n){
+  if(n===null || n===undefined || isNaN(n)) return n;
+  return currentCurrency === 'FCFA' ? Math.round(n * exchangeRate * 100) / 100 : n;
+}
+
+function updateAmountUnitLabels(){
+  document.querySelectorAll('.amount-unit').forEach(el=>{ el.textContent = currentCurrency; });
 }
 
 function updateExchangeRate(){
@@ -1097,7 +1123,7 @@ function setUnassignedType(t){
 
 function addUnassignedExpense(){
   const name = document.getElementById('u-name').value.trim();
-  const amount = parseFloat(document.getElementById('u-amount').value);
+  const amount = parseAmt(document.getElementById('u-amount').value);
   const dateUnknown = document.getElementById('u-date-unknown').checked;
   const date = dateUnknown ? null : (document.getElementById('u-date').value || todayStr());
   const justification = document.getElementById('u-justification').value.trim();
@@ -1147,9 +1173,9 @@ function renderUnassigned(){
 function saveEnvelope(){
   const name = document.getElementById('env-name').value.trim();
   const amountRaw = document.getElementById('env-amount').value;
-  const amount = amountRaw === '' ? 0 : parseFloat(amountRaw);
+  const amount = amountRaw === '' ? 0 : parseAmt(amountRaw);
   const goalRaw = document.getElementById('env-goal').value;
-  const plannedAmount = goalRaw === '' ? null : parseFloat(goalRaw);
+  const plannedAmount = goalRaw === '' ? null : parseAmt(goalRaw);
   const recurring = document.getElementById('env-recurring').checked;
   const dateUnknown = document.getElementById('env-date-unknown').checked;
   const date = dateUnknown ? null : (document.getElementById('env-date').value || todayStr());
@@ -1189,8 +1215,8 @@ function editEnvelope(id){
   showTab('envelopes');
   editingEnvelopeId = id;
   document.getElementById('env-name').value = env.name;
-  document.getElementById('env-amount').value = env.amount;
-  document.getElementById('env-goal').value = (env.plannedAmount !== null && env.plannedAmount !== undefined) ? env.plannedAmount : '';
+  document.getElementById('env-amount').value = toDisplayAmt(env.amount);
+  document.getElementById('env-goal').value = (env.plannedAmount !== null && env.plannedAmount !== undefined) ? toDisplayAmt(env.plannedAmount) : '';
   document.getElementById('env-date-unknown').checked = !!env.dateUnknown;
   document.getElementById('env-date').disabled = !!env.dateUnknown;
   document.getElementById('env-date').value = env.date || '';
@@ -1218,7 +1244,7 @@ function cancelEnvelopeEdit(){
 function saveExpense(){
   const envelopeId = document.getElementById('exp-envelope').value;
   const name = document.getElementById('exp-name').value.trim();
-  const amount = parseFloat(document.getElementById('exp-amount').value);
+  const amount = parseAmt(document.getElementById('exp-amount').value);
   const dateUnknown = document.getElementById('exp-date-unknown').checked;
   const date = dateUnknown ? null : (document.getElementById('exp-date').value || todayStr());
   const isTemplate = document.getElementById('exp-template').checked;
@@ -1253,7 +1279,7 @@ function editExpense(id){
   editingExpenseId = id;
   document.getElementById('exp-envelope').value = exp.envelopeId;
   document.getElementById('exp-name').value = exp.name;
-  document.getElementById('exp-amount').value = exp.amount;
+  document.getElementById('exp-amount').value = toDisplayAmt(exp.amount);
   document.getElementById('exp-date-unknown').checked = !!exp.dateUnknown;
   document.getElementById('exp-date').disabled = !!exp.dateUnknown;
   document.getElementById('exp-date').value = exp.date || '';
@@ -1453,7 +1479,7 @@ function envelopeDisplayName(e){
 
 function addTopup(){
   const envelopeId = document.getElementById('topup-envelope').value;
-  const amount = parseFloat(document.getElementById('topup-amount').value);
+  const amount = parseAmt(document.getElementById('topup-amount').value);
   const date = document.getElementById('topup-date').value || todayStr();
   const justification = document.getElementById('topup-justification').value.trim();
   if(!envelopeId){ customAlert('Crée d\'abord une enveloppe.'); return; }
@@ -1487,18 +1513,21 @@ function renderTopupHistory(){
     container.innerHTML = '<div class="empty-note">Aucun apport effectué.</div>';
     return;
   }
-  container.innerHTML = topups.map(t=>`
+  container.innerHTML = topups.map(t=>{
+    const env = getEnvelopeById(t.envelopeId);
+    return `
     <div class="tpl-item" style="flex-wrap:wrap;">
       <span class="tpl-name" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${t.date} — ${escapeHtml(t.envelopeName)}${t.justification ? `<br><span style="font-size:11px;color:var(--ink-soft);font-style:italic;">📝 ${escapeHtml(t.justification)}</span>` : ''}</span>
       <span class="tpl-amt" style="color:${t.amount<0?'var(--pink)':'var(--green)'};">${t.amount>=0?'+':''}${fmt(t.amount)}</span>
       <button class="del-btn" title="Annuler" onclick="deleteTopup('${t.id}')">✕</button>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 function addTransfer(){
   const fromId = document.getElementById('transfer-from').value;
   const toId = document.getElementById('transfer-to').value;
-  const amount = parseFloat(document.getElementById('transfer-amount').value);
+  const amount = parseAmt(document.getElementById('transfer-amount').value);
   const date = document.getElementById('transfer-date').value || todayStr();
   const isTemplate = document.getElementById('transfer-template').checked;
   if(!fromId || !toId){ customAlert('Il faut au moins deux enveloppes pour transférer.'); return; }
@@ -1674,11 +1703,12 @@ function renderEnvelopes(){
 }
 
 function renderSummary(){
-  const totalRevenu = data.envelopes.reduce((s,e)=>s+e.amount,0);
-  const totalDepense = data.expenses.filter(e=>!e.isTemplate && e.envelopeId).reduce((s,e)=>s+e.amount,0);
-  document.getElementById('sum-revenu').textContent = fmt(totalRevenu);
-  document.getElementById('sum-depense').textContent = fmt(totalDepense);
-  document.getElementById('sum-reste').textContent = fmt(totalRevenu-totalDepense);
+  const totalRevenuMAD = data.envelopes.reduce((s,e)=>s+e.amount,0);
+  const totalDepenseMAD = data.expenses.filter(e=>!e.isTemplate && e.envelopeId)
+    .reduce((s,e)=>s+e.amount,0);
+  document.getElementById('sum-revenu').textContent = fmt(totalRevenuMAD);
+  document.getElementById('sum-depense').textContent = fmt(totalDepenseMAD);
+  document.getElementById('sum-reste').textContent = fmt(totalRevenuMAD-totalDepenseMAD);
 }
 
 function renderBanner(){
@@ -1744,8 +1774,8 @@ function renderHistory(){
   let summaryHtml = '';
   if(filterActive){
     const label = (filtEnv && filtEnv!=='all') ? escapeHtml(envNameFor(filtEnv)) : (filtType==='besoin' ? 'Besoin' : 'Envie');
-    const sumTotal = list.reduce((s,e)=>s+e.amount,0);
-    summaryHtml = `<div class="filter-sum">Filtre : <b>${label}</b> — ${list.length} dépense${list.length>1?'s':''}, total <b>${fmt(sumTotal)}</b>
+    const sumTotalMAD = list.reduce((s,e)=>s+e.amount,0);
+    summaryHtml = `<div class="filter-sum">Filtre : <b>${label}</b> — ${list.length} dépense${list.length>1?'s':''}, total <b>${fmt(sumTotalMAD)}</b>
       <button class="ghost" onclick="clearHistoryFilters()">Réinitialiser</button></div>`;
   }
   summaryHtml += `<div class="check-row" style="margin-bottom:10px;">
@@ -1773,8 +1803,8 @@ function renderHistory(){
       currentGroup.items.push(e);
     });
     rowsHtml = groups.map(g=>{
-      const dayTotal = g.items.reduce((s,e)=>s+e.amount,0);
-      const header = `<tr class="day-header-row"><td colspan="6">${g.key==='__unknown__' ? '<span style="font-style:italic;color:var(--ink-soft);">Date inconnue</span>' : g.label} <span style="float:right;color:var(--green);">Total : ${fmt(dayTotal)} (${g.items.length})</span></td></tr>`;
+      const dayTotalMAD = g.items.reduce((s,e)=>s+e.amount,0);
+      const header = `<tr class="day-header-row"><td colspan="6">${g.key==='__unknown__' ? '<span style="font-style:italic;color:var(--ink-soft);">Date inconnue</span>' : g.label} <span style="float:right;color:var(--green);">Total : ${fmt(dayTotalMAD)} (${g.items.length})</span></td></tr>`;
       const rows = g.items.map(e=>historyRowHtml(e, envName)).join('');
       return header + rows;
     }).join('');
@@ -1794,6 +1824,7 @@ function renderHistory(){
 }
 
 function historyRowHtml(e, envName){
+  const env = getEnvelopeById(e.envelopeId);
   return `
     <tr>
       <td>${e.dateUnknown || !e.date ? '<span style="color:var(--ink-soft);font-style:italic;">Date inconnue</span>' : e.date}</td>
@@ -1857,7 +1888,7 @@ function renderApercu(){
 }
 
 function addCheck(){
-  const amount = parseFloat(document.getElementById('verif-amount').value);
+  const amount = parseAmt(document.getElementById('verif-amount').value);
   const date = document.getElementById('verif-date').value || todayStr();
   const note = document.getElementById('verif-note').value.trim();
   if(isNaN(amount) || amount < 0){ customAlert('Merci de saisir un montant valide.'); return; }
@@ -1933,7 +1964,7 @@ function addMonthCharge(year, month){
   const amountInput = document.getElementById(`mc-amount-${year}-${month}`);
   const name = nameInput.value.trim();
   const rawAmount = amountInput.value.trim();
-  const planned = rawAmount === '' ? null : parseFloat(rawAmount);
+  const planned = rawAmount === '' ? null : parseAmt(rawAmount);
   if(!name){ customAlert('Merci de donner un nom à la charge.'); return; }
   if(planned !== null && (isNaN(planned) || planned <= 0)){ customAlert('Le montant doit être un nombre valide (ou laisse-le vide).'); return; }
   data.envelopes.push({
@@ -1983,7 +2014,7 @@ function getSavingsGoal(year, month){
 function setSavingsGoal(year, month){
   const input = document.getElementById(`sg-goal-${year}-${month}`);
   const raw = input.value.trim();
-  const amount = raw === '' ? null : parseFloat(raw);
+  const amount = raw === '' ? null : parseAmt(raw);
   if(amount !== null && (isNaN(amount) || amount < 0)){ customAlert('Merci de saisir un nombre valide (ou laisse vide pour retirer l\'objectif).'); return; }
   const existing = data.savingsGoals.find(g=>g.year===year && g.month===month);
   if(amount === null){
@@ -2062,232 +2093,4 @@ function renderSavings(){
             ${reached ? '<span class="recurring-badge" style="border-color:var(--green);color:var(--green);">✓ Objectif atteint</span>' : ''}
           </div>
         </div>
-        <div class="row" style="gap:6px;margin-bottom:8px;">
-          <input id="sg-goal-${savingsYear}-${m}" type="number" min="0" step="0.01" placeholder="Objectif du mois (optionnel)" value="${goal!==null?goal:''}" style="flex:1;min-width:150px;font-size:13px;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--paper-alt);color:var(--ink);">
-          <button class="ghost" onclick="setSavingsGoal(${savingsYear}, ${m})">Enregistrer</button>
-        </div>
-        ${goal ? `<div class="bar" style="margin-bottom:6px;"><div class="bar-fill" style="width:${pct}%;"></div></div>` : ''}
-        <div style="font-size:12px;color:var(--ink-soft);">
-          Épargné ce mois : <b style="color:var(--ink);">${fmt(saved)}</b>${goal ? ` / ${fmt(goal)} objectif` : ' (aucun objectif fixé)'}
-        </div>
-      </div>`;
-  }).join('');
-}
-
-function renderCalendar(){
-  const label = document.getElementById('calendar-year-label');
-  const container = document.getElementById('calendar-months');
-  if(!label || !container) return;
-  label.textContent = calendarYear;
-
-  const currentYear = new Date().getFullYear();
-  const currentMonth = new Date().getMonth() + 1;
-
-  container.innerHTML = CAL_MONTH_NAMES.map((mname, idx)=>{
-    const m = idx + 1;
-    const isPast = calendarYear < currentYear || (calendarYear === currentYear && m < currentMonth);
-    const isCurrent = calendarYear === currentYear && m === currentMonth;
-    const envs = data.envelopes.filter(e=>e.chargeYear===calendarYear && e.chargeMonth===m);
-    const totalPlanned = envs.filter(e=>!e.notNeeded).reduce((s,e)=>s+(e.plannedAmount||0),0);
-    const totalFunded = envs.reduce((s,e)=>s+e.amount,0);
-    const envsHtml = envs.length ? envs.map(env=>{
-      const spent = envelopeSpent(env.id);
-      const reste = env.amount - spent;
-      const planned = env.plannedAmount;
-      const funded = env.amount > 0;
-      const pct = env.amount>0 ? Math.min(100,(spent/env.amount)*100) : 0;
-      if(env.notNeeded){
-        return `
-        <div class="tpl-item" style="flex-wrap:wrap;align-items:center;opacity:0.55;">
-          <span class="tpl-name" style="min-width:110px;text-decoration:line-through;">${escapeHtml(env.name)}</span>
-          <span style="flex:1;font-size:11.5px;font-style:italic;color:var(--ink-soft);">Non nécessaire ce mois-ci</span>
-          <button class="ghost" onclick="toggleChargeNotNeeded('${env.id}')">Réactiver</button>
-          <button class="del-btn" title="Supprimer" onclick="deleteEnvelope('${env.id}')">✕</button>
-        </div>`;
-      }
-      const isFinished = funded && spent > 0 && reste <= 0;
-      return `
-      <div style="border-bottom:1px solid var(--line);padding:8px 0;${isFinished?'opacity:0.7;':''}">
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px;">
-          <span class="tpl-name clickable" onclick="goToFiltered('envelope','${env.id}')" style="font-weight:600;${isFinished?'text-decoration:line-through;':''}">${escapeHtml(env.name)} ↗</span>
-          ${isFinished ? '<span class="recurring-badge" style="border-color:var(--green);color:var(--green);">✓ Terminé</span>' : ''}
-          <span>
-            <button class="ghost" title="Marquer non nécessaire ce mois-ci" onclick="toggleChargeNotNeeded('${env.id}')">⏸</button>
-            <button class="ghost" onclick="editEnvelope('${env.id}')">✎</button>
-            <button class="del-btn" title="Supprimer" onclick="deleteEnvelope('${env.id}')">✕</button>
-          </span>
-        </div>
-        <div style="font-size:11.5px;color:var(--ink-soft);margin-bottom:4px;">
-          ${planned ? `Prévisionnel : ${fmt(planned)} — ` : ''}${funded ? `Financé : ${fmt(env.amount)}` : 'Pas encore financé'}
-        </div>
-        ${funded ? `<div class="bar" style="margin-bottom:4px;"><div class="bar-fill ${reste<0?'over':''}" style="width:${pct}%;"></div></div>
-        <div style="font-size:12px;color:var(--ink);">Dépensé : <b>${fmt(spent)}</b> — Reste : <b style="color:${reste<0?'var(--pink)':'var(--green)'};">${fmt(reste)}</b></div>` : ''}
-      </div>`;
-    }).join('') : '<div style="font-size:12px;color:var(--ink-soft);padding:4px 0;">Aucune charge pour ce mois.</div>';
-
-    return `
-      <div class="card-form" style="margin-top:12px;${isPast?'opacity:0.55;':''}">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px;">
-          <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:14px;">
-            ${mname} ${calendarYear} ${isCurrent ? '<span class="recurring-badge">en cours</span>' : ''}
-          </div>
-          ${envs.length ? `<button class="ghost" style="border-color:var(--pink);color:var(--pink);font-size:11px;padding:5px 8px;" onclick="deleteAllChargesForMonth(${calendarYear}, ${m})">Tout supprimer</button>` : ''}
-        </div>
-        ${envs.length ? `<div style="font-size:11.5px;color:var(--ink-soft);margin-bottom:10px;">Total prévisionnel : <b style="color:var(--yellow);">${fmt(totalPlanned)}</b> — Total financé : <b style="color:var(--green);">${fmt(totalFunded)}</b></div>` : ''}
-        <div style="margin-bottom:10px;">${envsHtml}</div>
-        <div class="row" style="gap:6px;">
-          <input id="mc-name-${calendarYear}-${m}" type="text" placeholder="Ex: Loyer, Nourriture..." style="flex:1;min-width:120px;font-size:13px;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--paper-alt);color:var(--ink);">
-          <input id="mc-amount-${calendarYear}-${m}" type="number" min="0" step="0.01" placeholder="Montant (optionnel)" style="flex:1;min-width:90px;font-size:13px;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--paper-alt);color:var(--ink);">
-          <button class="ghost" onclick="addMonthCharge(${calendarYear}, ${m})">+ Ajouter</button>
-        </div>
-      </div>`;
-  }).join('');
-}
-
-function renderAllTemplates(){
-  const expContainer = document.getElementById('all-expense-templates');
-  const trfContainer = document.getElementById('all-transfer-templates');
-  if(!expContainer || !trfContainer) return;
-
-  const expTemplates = data.expenses.filter(e=>e.isTemplate)
-    .slice().sort((a,b)=> (a.envelopeId||'').localeCompare(b.envelopeId||''));
-  expContainer.innerHTML = expTemplates.length ? expTemplates.map(t=>{
-    const env = data.envelopes.find(e=>e.id===t.envelopeId);
-    const envName = env ? env.name : '—';
-    const reste = env ? env.amount - envelopeSpent(env.id) : null;
-    const projected = reste!==null ? reste - t.amount : null;
-    return `
-    <div class="tpl-item" style="flex-wrap:wrap;">
-      <span class="tpl-name"><span class="tpl-tag ${t.type}"></span><b>${escapeHtml(envName)}</b> — ${escapeHtml(t.name)}
-        ${projected!==null ? `<span style="color:${projected<0?'var(--pink)':'var(--ink-soft)'};font-size:11px;"> — resterait ${fmt(projected)}</span>` : ''}
-      </span>
-      <span class="tpl-amt">${fmt(t.amount)}</span>
-      <button class="ghost" onclick="editExpense('${t.id}')">Modifier</button>
-      <button class="ghost" onclick="activateTemplate('${t.id}')">Ajouter</button>
-      <button class="del-btn" title="Supprimer" onclick="deleteExpense('${t.id}')">✕</button>
-    </div>`;
-  }).join('') : '<div class="empty-note">Aucun modèle de dépense, toutes enveloppes confondues.</div>';
-
-  const trfTemplates = (data.transfers || []).filter(t=>t.isTemplate);
-  trfContainer.innerHTML = trfTemplates.length ? trfTemplates.map(t=>{
-    const fromEnv = data.envelopes.find(e=>e.id===t.fromId);
-    const toEnv = data.envelopes.find(e=>e.id===t.toId);
-    const fromReste = fromEnv ? fromEnv.amount - envelopeSpent(fromEnv.id) : null;
-    const toReste = toEnv ? toEnv.amount - envelopeSpent(toEnv.id) : null;
-    const projLabel = (fromReste!==null && toReste!==null)
-      ? `<span style="color:var(--ink-soft);font-size:11px;"> — ${escapeHtml(t.fromName)} resterait ${fmt(fromReste - t.amount)}, ${escapeHtml(t.toName)} resterait ${fmt(toReste + t.amount)}</span>` : '';
-    return `
-    <div class="tpl-item" style="flex-wrap:wrap;">
-      <span class="tpl-name">${escapeHtml(t.fromName)} → ${escapeHtml(t.toName)}${projLabel}</span>
-      <span class="tpl-amt">${fmt(t.amount)}</span>
-      <button class="ghost" onclick="activateTransferTemplate('${t.id}')">Transférer</button>
-      <button class="del-btn" title="Supprimer" onclick="deleteTransfer('${t.id}')">✕</button>
-    </div>`;
-  }).join('') : '<div class="empty-note">Aucun modèle de transfert.</div>';
-}
-
-function renderVerif(){
-  const totalRevenu = data.envelopes.reduce((s,e)=>s+e.amount,0);
-  const totalDepense = data.expenses.filter(e=>!e.isTemplate && e.envelopeId).reduce((s,e)=>s+e.amount,0);
-  const theorique = totalRevenu - totalDepense;
-  document.getElementById('verif-theorique').textContent = fmt(theorique);
-
-  const checks = (data.checks || []).slice().sort((a,b)=> (b.date+b.createdAt).localeCompare(a.date+a.createdAt));
-  const last = checks[0];
-  const declareEl = document.getElementById('verif-declare');
-  const ecartEl = document.getElementById('verif-ecart');
-  const ecartLabel = document.getElementById('verif-ecart-label');
-  const ecartCard = document.getElementById('verif-ecart-card');
-
-  if(!last){
-    declareEl.textContent = '—';
-    ecartEl.textContent = '—';
-    ecartLabel.textContent = 'Écart';
-  } else {
-    declareEl.textContent = fmt(last.reel);
-    const ecartNow = last.reel - theorique;
-    ecartEl.textContent = (ecartNow > 0 ? '+' : '') + fmt(ecartNow);
-    if(ecartNow < 0){
-      ecartLabel.textContent = 'Déficit';
-      ecartCard.className = 'stat depense';
-    } else if(ecartNow > 0){
-      ecartLabel.textContent = 'Surplus';
-      ecartCard.className = 'stat revenu';
-    } else {
-      ecartLabel.textContent = 'Équilibré';
-      ecartCard.className = 'stat reste';
-    }
-  }
-
-  const container = document.getElementById('verif-history');
-  if(checks.length===0){
-    container.innerHTML = '<div class="empty-note">Aucun pointage enregistré. Déclare ce que tu as réellement en main pour comparer.</div>';
-    return;
-  }
-  container.innerHTML = `
-    <div class="table-scroll">
-    <table class="history">
-      <thead><tr><th>Date</th><th style="text-align:right;">Théorique</th><th style="text-align:right;">Réel déclaré</th><th style="text-align:right;">Écart</th><th>Note</th><th></th></tr></thead>
-      <tbody>
-        ${checks.map(c=>{
-          const ec = c.reel - c.theorique;
-          const color = ec < 0 ? 'var(--pink)' : (ec > 0 ? 'var(--green)' : 'var(--ink-soft)');
-          return `<tr>
-            <td>${c.date}</td>
-            <td class="amt-cell">${fmt(c.theorique)}</td>
-            <td class="amt-cell">${fmt(c.reel)}</td>
-            <td class="amt-cell" style="color:${color};font-weight:700;">${(ec>0?'+':'')+fmt(ec)}</td>
-            <td style="color:var(--ink-soft);max-width:180px;">${c.note ? escapeHtml(c.note) : '—'}</td>
-            <td style="white-space:nowrap;">
-              ${ec===0 ? '' : c.applied
-                ? '<span style="font-size:11px;color:var(--ink-soft);">✓ Appliqué</span>'
-                : `<button class="ghost" title="Appliquer cet écart à une enveloppe" onclick="startApplyCheck('${c.id}')">↔ Appliquer</button>`}
-              <button class="del-btn" title="Supprimer" onclick="deleteCheck('${c.id}')">✕</button>
-            </td>
-          </tr>`;
-        }).join('')}
-      </tbody>
-    </table>
-    </div>
-    <div id="verif-apply-panel"></div>`;
-}
-
-function renderAll(){
-  renderSelects();
-  populateMonthOptions();
-  renderEnvelopes();
-  renderSummary();
-  renderBanner();
-  renderHistory();
-  renderApercu();
-  renderVerif();
-  renderTransferHistory();
-  renderTopupHistory();
-  renderUnassigned();
-  renderAllTemplates();
-  renderCalendar();
-  renderSavings();
-  updateUndoButton();
-}
-
-function tickClock(){
-  const d = new Date();
-  document.getElementById('clock-time').textContent = d.toLocaleTimeString('fr-FR');
-  document.getElementById('clock-date').textContent = d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
-}
-setInterval(tickClock, 1000);
-tickClock();
-
-load();
-</script>
-
-<script>
-// Enregistrement du service worker pour le fonctionnement hors-ligne (PWA)
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').catch((err) => {
-      console.warn('Échec d\'enregistrement du service worker :', err);
-    });
-  });
-}
-          </script>
+       
